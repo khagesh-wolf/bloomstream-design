@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, User, Coffee } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  usernameSchema, 
+  passwordSchema, 
+  validateInput, 
+  checkLoginRateLimit, 
+  recordLoginAttempt 
+} from '@/lib/validation';
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -24,11 +31,32 @@ export default function Auth() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    // Validate inputs
+    const usernameValidation = validateInput(usernameSchema, username);
+    if (!usernameValidation.success) {
+      toast.error(usernameValidation.error);
+      return;
+    }
 
+    const passwordValidation = validateInput(passwordSchema, password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error);
+      return;
+    }
+
+    // Check rate limit
+    const rateLimit = checkLoginRateLimit(username);
+    if (!rateLimit.allowed) {
+      toast.error(`Too many login attempts. Please try again in ${rateLimit.remainingTime} seconds.`);
+      return;
+    }
+
+    setIsLoading(true);
     await new Promise(resolve => setTimeout(resolve, 300));
 
     const success = login(username, password);
+    recordLoginAttempt(username, success);
     
     if (success) {
       toast.success('Login successful!');
@@ -39,7 +67,12 @@ export default function Auth() {
         navigate('/counter');
       }
     } else {
-      toast.error('Invalid username or password');
+      const attemptsLeft = rateLimit.attemptsLeft ? rateLimit.attemptsLeft - 1 : 0;
+      if (attemptsLeft > 0) {
+        toast.error(`Invalid credentials. ${attemptsLeft} attempts remaining.`);
+      } else {
+        toast.error('Account temporarily locked. Please try again in 5 minutes.');
+      }
     }
     
     setIsLoading(false);
@@ -71,9 +104,10 @@ export default function Auth() {
               type="text"
               placeholder="Username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value.slice(0, 20))}
               className="pl-12 h-14 bg-muted/50 border-border rounded-xl text-base"
               required
+              maxLength={20}
             />
           </div>
           
@@ -83,9 +117,10 @@ export default function Auth() {
               type="password"
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => setPassword(e.target.value.slice(0, 50))}
               className="pl-12 h-14 bg-muted/50 border-border rounded-xl text-base"
               required
+              maxLength={50}
             />
           </div>
 
@@ -98,13 +133,9 @@ export default function Auth() {
           </Button>
         </form>
 
-        <div className="mt-8 p-5 bg-muted/50 rounded-xl border border-border">
-          <p className="text-sm text-muted-foreground text-center mb-3 font-medium">Demo Credentials</p>
-          <div className="text-sm text-center space-y-2">
-            <p><span className="font-semibold text-foreground">Admin:</span> <span className="text-muted-foreground">admin / admin123</span></p>
-            <p><span className="font-semibold text-foreground">Counter:</span> <span className="text-muted-foreground">counter / counter123</span></p>
-          </div>
-        </div>
+        <p className="mt-6 text-xs text-center text-muted-foreground">
+          Contact your administrator for login credentials
+        </p>
       </div>
     </div>
   );

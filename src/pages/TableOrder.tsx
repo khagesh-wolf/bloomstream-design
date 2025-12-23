@@ -23,6 +23,12 @@ import { toast } from 'sonner';
 import { formatNepalTime } from '@/lib/nepalTime';
 import { useFavorites } from '@/hooks/useFavorites';
 import { useWaitTime } from '@/hooks/useWaitTime';
+import { 
+  phoneSchema, 
+  specialInstructionsSchema, 
+  validateInput,
+  sanitizeText 
+} from '@/lib/validation';
 
 type Category = 'Tea' | 'Snacks' | 'Cold Drink' | 'Pastry' | 'Favorites';
 
@@ -217,8 +223,11 @@ export default function TableOrder() {
 
   const handlePhoneSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) {
-      toast.error('Please enter a valid phone number');
+    
+    // Validate phone number
+    const phoneValidation = validateInput(phoneSchema, phone);
+    if (!phoneValidation.success) {
+      toast.error(phoneValidation.error);
       return;
     }
 
@@ -242,10 +251,23 @@ export default function TableOrder() {
       return;
     }
 
+    // Validate special instructions if provided
+    if (specialInstructions.trim()) {
+      const instructionsValidation = validateInput(specialInstructionsSchema, specialInstructions.trim());
+      if (!instructionsValidation.success) {
+        toast.error(instructionsValidation.error);
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    addOrder(table, phone, cart, specialInstructions.trim() || undefined);
+    const sanitizedInstructions = specialInstructions.trim() 
+      ? sanitizeText(specialInstructions.trim()) 
+      : undefined;
+    
+    addOrder(table, phone, cart, sanitizedInstructions);
     
     setCart([]);
     setSpecialInstructions('');

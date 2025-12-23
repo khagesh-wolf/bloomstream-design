@@ -17,6 +17,20 @@ import { toast } from 'sonner';
 import { formatNepalDateTime, formatNepalDateReadable, getNepalTodayString, getNepalDateDaysAgo, getTransactionDateInNepal } from '@/lib/nepalTime';
 import { QRCodeSVG } from 'qrcode.react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import {
+  validateInput,
+  usernameSchema,
+  passwordSchema,
+  staffNameSchema,
+  menuItemNameSchema,
+  menuItemDescriptionSchema,
+  menuItemPriceSchema,
+  urlSchema,
+  wifiSSIDSchema,
+  wifiPasswordSchema,
+  restaurantNameSchema,
+  sanitizeText
+} from '@/lib/validation';
 
 type Category = 'Tea' | 'Snacks' | 'Cold Drink' | 'Pastry';
 const categories: Category[] = ['Tea', 'Snacks', 'Cold Drink', 'Pastry'];
@@ -202,16 +216,36 @@ export default function Admin() {
   }).sort((a, b) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime());
 
   const handleAddItem = () => {
-    if (!newItem.name || !newItem.price) {
-      toast.error('Please fill all fields');
+    // Validate menu item name
+    const nameValidation = validateInput(menuItemNameSchema, newItem.name);
+    if (!nameValidation.success) {
+      toast.error(nameValidation.error);
       return;
     }
+
+    // Validate price
+    const price = parseFloat(newItem.price);
+    const priceValidation = validateInput(menuItemPriceSchema, price);
+    if (!priceValidation.success) {
+      toast.error(priceValidation.error);
+      return;
+    }
+
+    // Validate description if provided
+    if (newItem.description) {
+      const descValidation = validateInput(menuItemDescriptionSchema, newItem.description);
+      if (!descValidation.success) {
+        toast.error(descValidation.error);
+        return;
+      }
+    }
+
     addMenuItem({ 
-      name: newItem.name, 
-      price: parseFloat(newItem.price), 
+      name: sanitizeText(newItem.name), 
+      price: price, 
       category: newItem.category, 
       available: true,
-      description: newItem.description || undefined,
+      description: newItem.description ? sanitizeText(newItem.description) : undefined,
       image: newItem.image || undefined
     });
     toast.success('Item added');
@@ -288,15 +322,37 @@ export default function Admin() {
   };
 
   const handleAddStaff = () => {
-    if (!newStaff.username || !newStaff.password || !newStaff.name) {
-      toast.error('Please fill all fields');
+    // Validate username
+    const usernameValidation = validateInput(usernameSchema, newStaff.username);
+    if (!usernameValidation.success) {
+      toast.error(usernameValidation.error);
       return;
     }
-    if (staff.some(s => s.username === newStaff.username)) {
+
+    // Validate password
+    const passwordValidation = validateInput(passwordSchema, newStaff.password);
+    if (!passwordValidation.success) {
+      toast.error(passwordValidation.error);
+      return;
+    }
+
+    // Validate name
+    const nameValidation = validateInput(staffNameSchema, newStaff.name);
+    if (!nameValidation.success) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    if (staff.some(s => s.username.toLowerCase() === newStaff.username.toLowerCase())) {
       toast.error('Username already exists');
       return;
     }
-    addStaff(newStaff);
+
+    addStaff({
+      ...newStaff,
+      username: sanitizeText(newStaff.username),
+      name: sanitizeText(newStaff.name)
+    });
     toast.success('Staff added');
     setNewStaff({ username: '', password: '', name: '', role: 'counter' });
     setStaffModal({ open: false, editing: null });
@@ -304,7 +360,27 @@ export default function Admin() {
 
   const handleUpdateStaff = () => {
     if (!staffModal.editing) return;
-    updateStaff(staffModal.editing.id, staffModal.editing);
+
+    // Validate name if changed
+    const nameValidation = validateInput(staffNameSchema, staffModal.editing.name);
+    if (!nameValidation.success) {
+      toast.error(nameValidation.error);
+      return;
+    }
+
+    // Validate password if changed
+    if (staffModal.editing.password) {
+      const passwordValidation = validateInput(passwordSchema, staffModal.editing.password);
+      if (!passwordValidation.success) {
+        toast.error(passwordValidation.error);
+        return;
+      }
+    }
+
+    updateStaff(staffModal.editing.id, {
+      ...staffModal.editing,
+      name: sanitizeText(staffModal.editing.name)
+    });
     toast.success('Staff updated');
     setStaffModal({ open: false, editing: null });
   };
