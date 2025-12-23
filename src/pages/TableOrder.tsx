@@ -35,6 +35,7 @@ export default function TableOrder() {
   const [cartModalOpen, setCartModalOpen] = useState(false);
   const [billModalOpen, setBillModalOpen] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [specialInstructions, setSpecialInstructions] = useState('');
 
   const table = parseInt(tableNumber || '0');
   
@@ -197,9 +198,10 @@ export default function TableOrder() {
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    addOrder(table, phone, cart, undefined);
+    addOrder(table, phone, cart, specialInstructions.trim() || undefined);
     
     setCart([]);
+    setSpecialInstructions('');
     setCartModalOpen(false);
     setSuccessModalOpen(true);
     setIsSubmitting(false);
@@ -568,6 +570,22 @@ export default function TableOrder() {
             ))}
 
             <div className="mt-5 pt-5 border-t border-[#eee]">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-[#666] mb-2">
+                  Special Instructions (Optional)
+                </label>
+                <textarea
+                  value={specialInstructions}
+                  onChange={(e) => setSpecialInstructions(e.target.value.slice(0, 100))}
+                  placeholder="e.g., Less sugar, extra spicy..."
+                  maxLength={100}
+                  className="w-full p-3 border-2 border-[#eee] rounded-lg text-sm resize-none outline-none focus:border-[#06C167]"
+                  rows={2}
+                />
+                <div className="text-xs text-[#999] text-right mt-1">
+                  {specialInstructions.length}/100
+                </div>
+              </div>
               <div className="flex justify-between font-bold text-xl mb-5">
                 <span>Total</span>
                 <span>रू{cartTotal}</span>

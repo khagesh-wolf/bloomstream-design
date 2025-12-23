@@ -188,6 +188,12 @@ export default function Counter() {
             <span>${i.name}</span>
           </div>
         `).join('')}
+        ${order.notes ? `
+          <div style="border-top: 1px dashed black; margin-top: 10px; padding-top: 10px;">
+            <div style="font-weight: bold; margin-bottom: 5px;">📝 Special Instructions:</div>
+            <div style="font-size: 1.1rem;">${order.notes}</div>
+          </div>
+        ` : ''}
         <div style="border-top: 2px solid black; margin-top: 20px; padding-top: 10px; text-align: center;">
           Ref: #${order.id.slice(-6)}
         </div>
