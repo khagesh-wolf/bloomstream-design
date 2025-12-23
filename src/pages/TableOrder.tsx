@@ -210,8 +210,8 @@ export default function TableOrder() {
     if (cat === 'Favorites') return; // No scroll for favorites
     const el = document.getElementById(`cat-${cat}`);
     if (el) {
-      // Calculate offset for sticky header (52px) + category pills (~60px)
-      const headerOffset = 120;
+      // Calculate offset for sticky header (52px) + category pills (~68px) + extra padding
+      const headerOffset = 140;
       const elementPosition = el.getBoundingClientRect().top + window.scrollY;
       const offsetPosition = elementPosition - headerOffset;
       
