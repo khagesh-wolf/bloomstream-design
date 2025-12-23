@@ -114,10 +114,11 @@ export default function Admin() {
       </aside>
 
       {/* Main */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="flex-1 p-8 overflow-y-auto flex flex-col">
         <div className="mb-6">
           <p className="text-sm text-muted-foreground">{formatNepalDateTime(new Date())}</p>
         </div>
+        <div className="flex-1">
 
         {/* Dashboard */}
         {tab === 'dashboard' && (
@@ -262,6 +263,14 @@ export default function Admin() {
             </div>
           </div>
         )}
+        </div>
+        
+        {/* Copyright Footer */}
+        <footer className="mt-auto pt-8 pb-4 text-center border-t border-border">
+          <p className="text-sm text-muted-foreground">
+            © {new Date().getFullYear()} {settings.restaurantName}. All rights reserved.
+          </p>
+        </footer>
       </main>
 
       {/* Add Item Modal */}

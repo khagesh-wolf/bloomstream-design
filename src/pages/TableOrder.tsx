@@ -680,6 +680,13 @@ export default function TableOrder() {
         </div>
       )}
 
+      {/* Copyright Footer */}
+      <footer className="py-4 text-center border-t border-[#eee] bg-white mt-auto">
+        <p className="text-xs text-[#999]">
+          © {new Date().getFullYear()} {settings.restaurantName}. All rights reserved.
+        </p>
+      </footer>
+
       <style>{`
         @keyframes slide-up {
           from { transform: translateY(100%); }
