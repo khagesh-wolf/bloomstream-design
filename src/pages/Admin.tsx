@@ -1434,9 +1434,13 @@ export default function Admin() {
                     </div>
                     <Switch
                       checked={settings.pointSystemEnabled || false}
-                      onCheckedChange={(checked) => {
-                        updateSettings({ pointSystemEnabled: checked });
-                        toast.success(checked ? 'Point system enabled' : 'Point system disabled');
+                      onCheckedChange={async (checked) => {
+                        try {
+                          await updateSettings({ pointSystemEnabled: checked });
+                          toast.success(checked ? 'Point system enabled' : 'Point system disabled');
+                        } catch {
+                          toast.error('Failed to save setting. Please try again.');
+                        }
                       }}
                     />
                   </div>

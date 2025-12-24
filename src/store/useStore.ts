@@ -130,7 +130,7 @@ interface StoreState extends AuthState {
   // Settings
   settings: Settings;
   setSettings: (settings: Settings) => void;
-  updateSettings: (settings: Partial<Settings>) => void;
+  updateSettings: (settings: Partial<Settings>) => Promise<void>;
 
   // Expenses
   expenses: Expense[];
@@ -486,12 +486,21 @@ export const useStore = create<StoreState>()((set, get) => ({
     } 
   })),
 
-  updateSettings: (newSettings) => {
-    set((state) => ({
-      settings: { ...state.settings, ...newSettings }
-    }));
-    const updated = { ...get().settings, ...newSettings };
-    syncToBackend(() => settingsApi.update(updated));
+  updateSettings: async (newSettings) => {
+    const previousSettings = get().settings;
+    const updated = { ...previousSettings, ...newSettings };
+    
+    // Optimistically update UI
+    set({ settings: updated });
+    
+    // Sync to backend - revert on failure
+    try {
+      await settingsApi.update(updated);
+    } catch (err) {
+      console.error('[Store] Settings sync failed, reverting:', err);
+      set({ settings: previousSettings });
+      throw err; // Re-throw so caller knows it failed
+    }
   },
 
   // Expenses - starts empty, loaded from backend
