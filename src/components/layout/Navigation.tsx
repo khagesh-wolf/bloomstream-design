@@ -1,7 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Coffee, ChefHat, CreditCard, LayoutDashboard, Settings } from 'lucide-react';
-import { BackendConfig } from '@/components/BackendConfig';
+import { ServerConfig } from '@/components/ServerConfig';
 import { SyncStatus } from '@/components/SyncStatus';
 
 const navItems = [
@@ -50,7 +50,7 @@ export function Navigation() {
             })}
 
             <SyncStatus />
-            <BackendConfig />
+            <ServerConfig />
           </div>
         </div>
       </div>

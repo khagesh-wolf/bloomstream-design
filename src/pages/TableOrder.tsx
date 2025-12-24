@@ -155,39 +155,6 @@ export default function TableOrder() {
   // Get customer's orders for this table - subscribe to orders from store directly for real-time updates
   const storeOrders = useStore(state => state.orders);
   
-  // Force re-render trigger for localStorage sync
-  const [, forceUpdate] = useState(0);
-  
-  // Poll localStorage for updates (fallback for cross-tab sync)
-  useEffect(() => {
-    const syncFromStorage = () => {
-      const stored = localStorage.getItem('chiyadani-store');
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed.state?.orders) {
-            // Force zustand to sync with storage
-            useStore.persist.rehydrate();
-            forceUpdate(n => n + 1);
-          }
-        } catch (e) {
-          console.log('Storage sync error:', e);
-        }
-      }
-    };
-    
-    // Listen for storage changes from other tabs
-    window.addEventListener('storage', syncFromStorage);
-    
-    // Also poll every 2 seconds as fallback
-    const interval = setInterval(syncFromStorage, 2000);
-    
-    return () => {
-      window.removeEventListener('storage', syncFromStorage);
-      clearInterval(interval);
-    };
-  }, []);
-  
   const myOrders = storeOrders.filter(
     o => o.tableNumber === table && o.customerPhone === phone && ['pending', 'accepted'].includes(o.status)
   );

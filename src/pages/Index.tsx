@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { Coffee, User, ChefHat, CreditCard, Settings, TrendingUp, Users, ShoppingBag, ArrowRight, Sparkles } from 'lucide-react';
-import { BackendConfig } from '@/components/BackendConfig';
+import { ServerConfig } from '@/components/ServerConfig';
 import { formatNepalDateTime } from '@/lib/nepalTime';
 
 const modules = [
@@ -50,7 +50,7 @@ export default function Index() {
           </div>
           
           <div className="flex items-center gap-3">
-            <BackendConfig />
+            <ServerConfig />
             {isAuthenticated && currentUser ? (
               <Link to={currentUser.role === 'admin' ? '/admin' : '/counter'}>
                 <Button variant="outline" className="rounded-xl border-border hover:bg-muted">
