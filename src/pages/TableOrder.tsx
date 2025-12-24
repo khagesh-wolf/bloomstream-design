@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { OrderItem } from '@/types';
@@ -39,7 +39,9 @@ export default function TableOrder() {
   const [phone, setPhone] = useState('');
   const [isPhoneEntered, setIsPhoneEntered] = useState(false);
   const [cart, setCart] = useState<OrderItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState<string>('Favorites');
+  const [activeCategory, setActiveCategory] = useState<string>('');
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [fabOpen, setFabOpen] = useState(false);
@@ -138,8 +140,15 @@ export default function TableOrder() {
     setLockedTable(table);
   }, [table, settings.tableCount, navigate]);
 
-  // Build category list: Favorites + dynamic categories from store
+  // Build category list: dynamic categories from store (Favorites removed from default)
   const categoryNames = ['Favorites', ...categories.map(c => c.name)];
+  
+  // Set initial category to first real category (not Favorites)
+  useEffect(() => {
+    if (!activeCategory && categories.length > 0) {
+      setActiveCategory(categories[0].name);
+    }
+  }, [categories, activeCategory]);
   
   // Get favorite items
   const favoriteItems = menuItems.filter(item => favorites.includes(item.id) && item.available);
@@ -147,6 +156,40 @@ export default function TableOrder() {
   const filteredItems = activeCategory === 'Favorites' 
     ? favoriteItems
     : menuItems.filter(item => item.category === activeCategory);
+
+  // Intersection Observer for auto-selecting categories on scroll
+  useEffect(() => {
+    if (activeCategory === 'Favorites') return; // Skip for favorites view
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '-150px 0px -50% 0px', // Account for sticky header
+      threshold: 0
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      if (isScrolling) return; // Don't update during manual scroll
+      
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const categoryId = entry.target.id.replace('cat-', '');
+          if (categoryId && categoryId !== 'Favorites') {
+            setActiveCategory(categoryId);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Observe all category sections
+    categories.forEach(cat => {
+      const element = document.getElementById(`cat-${cat.name}`);
+      if (element) observer.observe(element);
+    });
+
+    return () => observer.disconnect();
+  }, [categories, activeCategory, isScrolling]);
 
   // Calculate estimated wait time for current cart
   const estimatedWait = cart.length > 0 
@@ -272,7 +315,20 @@ export default function TableOrder() {
 
   const scrollToCategory = (cat: string) => {
     setActiveCategory(cat);
-    if (cat === 'Favorites') return; // No scroll for favorites
+    setIsScrolling(true);
+    
+    // Clear any existing timeout
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    
+    if (cat === 'Favorites') {
+      // Scroll to top for favorites
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 500);
+      return;
+    }
+    
     const el = document.getElementById(`cat-${cat}`);
     if (el) {
       // Calculate offset for sticky header (52px) + category pills (~68px) + extra padding
@@ -284,6 +340,9 @@ export default function TableOrder() {
         top: offsetPosition,
         behavior: 'smooth'
       });
+      
+      // Re-enable intersection observer after scroll completes
+      scrollTimeoutRef.current = setTimeout(() => setIsScrolling(false), 500);
     }
   };
 
