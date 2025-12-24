@@ -2,13 +2,30 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
-import { QrCode, Download, ArrowRight, Smartphone } from 'lucide-react';
+import { QrCode, Download, ArrowRight, Smartphone, Share, Plus, MoreVertical } from 'lucide-react';
+
+// Detect iOS
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+// Detect if in Safari
+const isInSafari = () => {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+};
 
 export default function ScanTable() {
   const navigate = useNavigate();
   const { settings } = useStore();
   const { isInstallable, isInstalled, install } = usePWAInstall();
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
+  const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+
+  // Check if running as PWA
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+  const iOS = isIOS();
+  const safari = isInSafari();
 
   // Check for existing session
   useEffect(() => {
@@ -50,15 +67,23 @@ export default function ScanTable() {
       }
     }
     
-    // Show install prompt if installable and not already shown recently
+    // Don't show install prompts if already installed
+    if (isPWA || isInstalled) return;
+    
+    // Check if prompt was shown recently (within 24 hours)
     const lastPrompt = localStorage.getItem('chiyadani:installPromptShown');
-    const shouldShowPrompt = isInstallable && !isInstalled && 
-      (!lastPrompt || Date.now() - parseInt(lastPrompt) > 24 * 60 * 60 * 1000);
+    const shouldShowPrompt = !lastPrompt || Date.now() - parseInt(lastPrompt) > 24 * 60 * 60 * 1000;
     
     if (shouldShowPrompt) {
-      setTimeout(() => setShowInstallPrompt(true), 1000);
+      setTimeout(() => {
+        if (iOS) {
+          setShowIOSInstructions(true);
+        } else if (isInstallable) {
+          setShowInstallPrompt(true);
+        }
+      }, 1000);
     }
-  }, [navigate, isInstallable, isInstalled]);
+  }, [navigate, isInstallable, isInstalled, isPWA, iOS]);
 
   const handleInstall = async () => {
     const success = await install();
@@ -71,10 +96,8 @@ export default function ScanTable() {
   const dismissInstall = () => {
     localStorage.setItem('chiyadani:installPromptShown', Date.now().toString());
     setShowInstallPrompt(false);
+    setShowIOSInstructions(false);
   };
-
-  // Check if running as PWA
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-gray-900 flex flex-col items-center justify-center p-6 text-white">
@@ -120,8 +143,8 @@ export default function ScanTable() {
         </div>
       )}
 
-      {/* Install Prompt Modal */}
-      {showInstallPrompt && (
+      {/* Android Install Prompt Modal */}
+      {showInstallPrompt && !iOS && (
         <>
           <div 
             className="fixed inset-0 bg-black/60 z-50"
@@ -168,6 +191,110 @@ export default function ScanTable() {
               className="w-full text-gray-500 py-2 text-sm"
             >
               Maybe later
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* iOS Instructions Modal */}
+      {showIOSInstructions && iOS && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/60 z-50"
+            onClick={dismissInstall}
+          />
+          <div className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl p-6 z-50 animate-slide-up safe-area-bottom max-h-[85vh] overflow-y-auto">
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
+                <span className="text-2xl">🍵</span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-gray-900 mb-1">Install {settings.restaurantName}</h3>
+                <p className="text-gray-600 text-sm">
+                  Add to your home screen for the best experience!
+                </p>
+              </div>
+            </div>
+
+            {/* Benefits */}
+            <div className="grid grid-cols-3 gap-3 mb-6 text-center">
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="text-2xl mb-1">⚡</div>
+                <div className="text-xs text-gray-600">Faster</div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="text-2xl mb-1">📱</div>
+                <div className="text-xs text-gray-600">Full Screen</div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-3">
+                <div className="text-2xl mb-1">🏠</div>
+                <div className="text-xs text-gray-600">Home Screen</div>
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div className="bg-gray-50 rounded-2xl p-4 mb-6">
+              <h4 className="font-semibold text-gray-900 mb-4 text-center">How to Install</h4>
+              
+              <div className="space-y-4">
+                {/* Step 1 */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-800 font-medium">Tap the Share button</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center">
+                        <Share className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <span className="text-gray-500 text-sm">at the bottom of Safari</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 2 */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                    2
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-800 font-medium">Scroll down and tap</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-8 h-8 bg-white rounded-lg border border-gray-200 flex items-center justify-center">
+                        <Plus className="w-5 h-5 text-gray-700" />
+                      </div>
+                      <span className="text-gray-700 font-medium">"Add to Home Screen"</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 3 */}
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0 text-sm font-bold">
+                    3
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-800 font-medium">Tap "Add" in the top right</p>
+                    <p className="text-gray-500 text-sm mt-1">The app will appear on your home screen!</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {!safari && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                <p className="text-amber-800 text-sm text-center">
+                  <span className="font-medium">Tip:</span> Open this page in Safari for the best installation experience
+                </p>
+              </div>
+            )}
+            
+            <button
+              onClick={dismissInstall}
+              className="w-full bg-black text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
+            >
+              Got it!
             </button>
           </div>
         </>
