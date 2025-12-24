@@ -1,9 +1,29 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { MenuItem, Order, Bill, Transaction, Customer, Staff, Settings, OrderStatus, OrderItem, Expense, WaiterCall } from '@/types';
+import {
+  Bill,
+  Customer,
+  Expense,
+  MenuItem,
+  Order,
+  OrderItem,
+  OrderStatus,
+  Settings,
+  Staff,
+  Transaction,
+  WaiterCall,
+} from '@/types';
 import { getNepalTimestamp, isToday } from '@/lib/nepalTime';
+import { billsApi, customersApi, ordersApi } from '@/lib/apiClient';
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
+
+const isBackendMode = () => (localStorage.getItem('backend_mode') as 'local' | 'backend') === 'backend';
+
+const safeSync = (fn: () => Promise<unknown>) => {
+  if (!isBackendMode()) return;
+  fn().catch((err) => console.error('[Store] Backend sync failed:', err));
+};
 
 const defaultMenuItems: MenuItem[] = [
   // Tea
@@ -193,29 +213,35 @@ export const useStore = create<StoreState>()(
           notes,
         };
         set((state) => ({ orders: [...state.orders, newOrder] }));
-        
+
+        // Backend sync (if enabled)
+        safeSync(() => ordersApi.create(newOrder));
+
         // Update customer
         get().addOrUpdateCustomer(customerPhone, 0);
-        
+
         return newOrder;
       },
 
-      updateOrderStatus: (id, status) => set((state) => ({
-        orders: state.orders.map(o =>
-          o.id === id ? { ...o, status, updatedAt: getNepalTimestamp() } : o
-        )
-      })),
+      updateOrderStatus: (id, status) => set((state) => {
+        safeSync(() => ordersApi.updateStatus(id, status));
+        return {
+          orders: state.orders.map(o =>
+            o.id === id ? { ...o, status, updatedAt: getNepalTimestamp() } : o
+          )
+        };
+      }),
 
-      getOrdersByTable: (tableNumber) => 
+      getOrdersByTable: (tableNumber) =>
         get().orders.filter(o => o.tableNumber === tableNumber && o.status !== 'cancelled'),
 
-      getOrdersByPhone: (phone) => 
+      getOrdersByPhone: (phone) =>
         get().orders.filter(o => o.customerPhone === phone),
 
-      getPendingOrders: () => 
+      getPendingOrders: () =>
         get().orders.filter(o => o.status === 'pending'),
 
-      getActiveOrders: () => 
+      getActiveOrders: () =>
         get().orders.filter(o => ['pending', 'accepted', 'preparing', 'ready'].includes(o.status)),
 
       // Bills
@@ -225,7 +251,7 @@ export const useStore = create<StoreState>()(
         const orders = get().orders.filter(o => orderIds.includes(o.id));
         const customerPhones = [...new Set(orders.map(o => o.customerPhone))];
         const subtotal = orders.reduce((sum, o) => sum + o.total, 0);
-        
+
         const bill: Bill = {
           id: generateId(),
           tableNumber,
@@ -237,8 +263,10 @@ export const useStore = create<StoreState>()(
           status: 'unpaid',
           createdAt: getNepalTimestamp(),
         };
-        
+
         set((state) => ({ bills: [...state.bills, bill] }));
+        safeSync(() => billsApi.create(bill));
+
         return bill;
       },
 
@@ -272,22 +300,24 @@ export const useStore = create<StoreState>()(
           transactions: [...state.transactions, transaction],
         }));
 
+        safeSync(() => billsApi.pay(billId, paymentMethod));
+
         // Update customer spending
         bill.customerPhones.forEach(phone => {
-        get().addOrUpdateCustomer(phone, bill.total / bill.customerPhones.length);
-      });
-
-      // Deduct redeemed points if discount was applied
-      if (bill.discount > 0) {
-        bill.customerPhones.forEach(phone => {
-          get().redeemPoints(phone, bill.discount);
+          get().addOrUpdateCustomer(phone, bill.total / bill.customerPhones.length);
         });
-      }
+
+        // Deduct redeemed points if discount was applied
+        if (bill.discount > 0) {
+          bill.customerPhones.forEach(phone => {
+            get().redeemPoints(phone, bill.discount);
+          });
+        }
       },
 
       getUnpaidOrdersByTable: (tableNumber) =>
-        get().orders.filter(o => 
-          o.tableNumber === tableNumber && 
+        get().orders.filter(o =>
+          o.tableNumber === tableNumber &&
           ['accepted', 'preparing', 'ready', 'served'].includes(o.status) &&
           !get().bills.some(b => b.status === 'paid' && b.orders.some(bo => bo.id === o.id))
         ),
@@ -307,30 +337,31 @@ export const useStore = create<StoreState>()(
         const existing = state.customers.find(c => c.phone === phone);
         // 10 rs spent = 1 point
         const newPoints = Math.floor(amount / 10);
-        if (existing) {
-          return {
-            customers: state.customers.map(c =>
-              c.phone === phone
-                ? {
-                    ...c,
-                    totalOrders: c.totalOrders + (amount > 0 ? 1 : 0),
-                    totalSpent: c.totalSpent + amount,
-                    points: c.points + newPoints,
-                    lastVisit: getNepalTimestamp(),
-                  }
-                : c
-            )
-          };
-        }
-        return {
-          customers: [...state.customers, {
+
+        const nextCustomers: Customer[] = existing
+          ? state.customers.map(c =>
+            c.phone === phone
+              ? {
+                ...c,
+                totalOrders: c.totalOrders + (amount > 0 ? 1 : 0),
+                totalSpent: c.totalSpent + amount,
+                points: c.points + newPoints,
+                lastVisit: getNepalTimestamp(),
+              }
+              : c
+          )
+          : [...state.customers, {
             phone,
             totalOrders: amount > 0 ? 1 : 0,
             totalSpent: amount,
             points: newPoints,
             lastVisit: getNepalTimestamp(),
-          }]
-        };
+          }];
+
+        const payload = nextCustomers.find(c => c.phone === phone);
+        if (payload) safeSync(() => customersApi.upsert(payload));
+
+        return { customers: nextCustomers };
       }),
 
       redeemPoints: (phone, points) => set((state) => {
@@ -470,7 +501,7 @@ if (channel) {
           menuItems: state.menuItems,
           expenses: state.expenses,
           waiterCalls: state.waiterCalls,
-        }
+        },
       });
     }
   });

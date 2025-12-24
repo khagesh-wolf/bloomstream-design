@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Coffee, ChefHat, CreditCard, LayoutDashboard, Settings } from 'lucide-react';
 import { BackendConfig } from '@/components/BackendConfig';
+import { SyncStatus } from '@/components/SyncStatus';
 
 const navItems = [
   { path: '/', label: 'Hub', icon: LayoutDashboard },
@@ -30,7 +31,7 @@ export function Navigation() {
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname === item.path;
-              
+
               return (
                 <Link
                   key={item.path}
@@ -47,6 +48,8 @@ export function Navigation() {
                 </Link>
               );
             })}
+
+            <SyncStatus />
             <BackendConfig />
           </div>
         </div>

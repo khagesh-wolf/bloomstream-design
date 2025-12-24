@@ -16,6 +16,8 @@ import {
 
 export type BackendMode = 'local' | 'backend';
 
+const LAST_SYNC_KEY = 'backend_last_sync';
+
 export const useBackendSync = () => {
   const [mode, setMode] = useState<BackendMode>(() => {
     return (localStorage.getItem('backend_mode') as BackendMode) || 'local';
@@ -23,20 +25,14 @@ export const useBackendSync = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(() => localStorage.getItem(LAST_SYNC_KEY));
 
   const store = useStore();
 
-  // Switch between local and backend mode
-  const switchMode = useCallback(async (newMode: BackendMode) => {
-    localStorage.setItem('backend_mode', newMode);
-    setMode(newMode);
-
-    if (newMode === 'backend') {
-      await connectToBackend();
-    } else {
-      wsSync.disconnect();
-      setIsConnected(false);
-    }
+  const markSynced = useCallback(() => {
+    const now = new Date().toISOString();
+    localStorage.setItem(LAST_SYNC_KEY, now);
+    setLastSyncAt(now);
   }, []);
 
   // Connect to backend and sync initial data
@@ -80,6 +76,7 @@ export const useBackendSync = () => {
       });
 
       setIsConnected(true);
+      markSynced();
       console.log('[BackendSync] Successfully synced with backend');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to connect to backend';
@@ -88,7 +85,20 @@ export const useBackendSync = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [store.settings]);
+  }, [store.settings, markSynced]);
+
+  // Switch between local and backend mode
+  const switchMode = useCallback(async (newMode: BackendMode) => {
+    localStorage.setItem('backend_mode', newMode);
+    setMode(newMode);
+
+    if (newMode === 'backend') {
+      await connectToBackend();
+    } else {
+      wsSync.disconnect();
+      setIsConnected(false);
+    }
+  }, [connectToBackend]);
 
   // Set up WebSocket event handlers
   useEffect(() => {
@@ -112,6 +122,7 @@ export const useBackendSync = () => {
       wsSync.on('MENU_UPDATE', async () => {
         const menuItems = await menuApi.getAll();
         useStore.setState({ menuItems });
+        markSynced();
       })
     );
 
@@ -120,6 +131,7 @@ export const useBackendSync = () => {
       wsSync.on('ORDER_UPDATE', async () => {
         const orders = await ordersApi.getAll();
         useStore.setState({ orders });
+        markSynced();
       })
     );
 
@@ -131,6 +143,7 @@ export const useBackendSync = () => {
           transactionsApi.getAll(),
         ]);
         useStore.setState({ bills, transactions });
+        markSynced();
       })
     );
 
@@ -139,6 +152,7 @@ export const useBackendSync = () => {
       wsSync.on('CUSTOMER_UPDATE', async () => {
         const customers = await customersApi.getAll();
         useStore.setState({ customers });
+        markSynced();
       })
     );
 
@@ -147,6 +161,7 @@ export const useBackendSync = () => {
       wsSync.on('WAITER_CALL_UPDATE', async () => {
         const waiterCalls = await waiterCallsApi.getAll();
         useStore.setState({ waiterCalls });
+        markSynced();
       })
     );
 
@@ -156,71 +171,7 @@ export const useBackendSync = () => {
     return () => {
       unsubscribers.forEach(unsub => unsub());
     };
-  }, [mode, connectToBackend]);
-
-  // Sync store actions to backend when in backend mode
-  const syncToBackend = useCallback(async (action: string, data: any) => {
-    if (mode !== 'backend') return;
-
-    try {
-      switch (action) {
-        case 'addMenuItem':
-          await menuApi.create(data);
-          break;
-        case 'updateMenuItem':
-          await menuApi.update(data.id, data);
-          break;
-        case 'deleteMenuItem':
-          await menuApi.delete(data.id);
-          break;
-        case 'addOrder':
-          await ordersApi.create(data);
-          break;
-        case 'updateOrderStatus':
-          await ordersApi.updateStatus(data.id, data.status);
-          break;
-        case 'createBill':
-          await billsApi.create(data);
-          break;
-        case 'payBill':
-          await billsApi.pay(data.id, data.paymentMethod);
-          break;
-        case 'callWaiter':
-          await waiterCallsApi.create(data);
-          break;
-        case 'acknowledgeWaiterCall':
-          await waiterCallsApi.acknowledge(data.id);
-          break;
-        case 'dismissWaiterCall':
-          await waiterCallsApi.dismiss(data.id);
-          break;
-        case 'addExpense':
-          await expensesApi.create(data);
-          break;
-        case 'deleteExpense':
-          await expensesApi.delete(data.id);
-          break;
-        case 'updateSettings':
-          await settingsApi.update(data);
-          break;
-        case 'addStaff':
-          await staffApi.create(data);
-          break;
-        case 'updateStaff':
-          await staffApi.update(data.id, data);
-          break;
-        case 'deleteStaff':
-          await staffApi.delete(data.id);
-          break;
-        case 'addOrUpdateCustomer':
-          await customersApi.upsert(data);
-          break;
-      }
-    } catch (err) {
-      console.error('[BackendSync] Failed to sync action:', action, err);
-      throw err;
-    }
-  }, [mode]);
+  }, [mode, connectToBackend, markSynced]);
 
   return {
     mode,
@@ -228,7 +179,7 @@ export const useBackendSync = () => {
     isConnected,
     isLoading,
     error,
-    syncToBackend,
+    lastSyncAt,
     reconnect: connectToBackend,
   };
 };
