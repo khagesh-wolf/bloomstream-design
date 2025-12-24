@@ -1,16 +1,30 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
 import { VitePWA } from "vite-plugin-pwa";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-    allowedHosts: true, // Allow all hosts including .local hostnames
-  },
+export default defineConfig(({ mode }) => {
+  // Check if SSL certificates exist for local HTTPS
+  const certPath = path.resolve(__dirname, 'chiyadani.local+3.pem');
+  const keyPath = path.resolve(__dirname, 'chiyadani.local+3-key.pem');
+  const hasSSL = fs.existsSync(certPath) && fs.existsSync(keyPath);
+
+  return {
+    server: {
+      host: "::",
+      port: 8080,
+      allowedHosts: true,
+      // Enable HTTPS if certificates exist
+      ...(hasSSL && {
+        https: {
+          cert: fs.readFileSync(certPath),
+          key: fs.readFileSync(keyPath),
+        },
+      }),
+    },
   plugins: [
     react(), 
     mode === "development" && componentTagger(),
@@ -109,10 +123,11 @@ export default defineConfig(({ mode }) => ({
         enabled: true
       }
     })
-  ].filter(Boolean),
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-}));
+  };
+});
