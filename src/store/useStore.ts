@@ -13,7 +13,7 @@ import {
   WaiterCall,
 } from '@/types';
 import { getNepalTimestamp, isToday } from '@/lib/nepalTime';
-import { billsApi, customersApi, ordersApi, menuApi, settingsApi, expensesApi, waiterCallsApi, staffApi } from '@/lib/apiClient';
+import { billsApi, customersApi, ordersApi, menuApi, settingsApi, expensesApi, waiterCallsApi, staffApi, transactionsApi } from '@/lib/apiClient';
 
 const generateId = () => Math.random().toString(36).substring(2, 11);
 
@@ -324,6 +324,7 @@ export const useStore = create<StoreState>()((set, get) => ({
     }));
 
     syncToBackend(() => billsApi.pay(billId, paymentMethod));
+    syncToBackend(() => transactionsApi.create(transaction));
 
     bill.customerPhones.forEach(phone => {
       get().addOrUpdateCustomer(phone, bill.total / bill.customerPhones.length);
@@ -394,11 +395,12 @@ export const useStore = create<StoreState>()((set, get) => ({
   redeemPoints: (phone, points) => set((state) => {
     const existing = state.customers.find(c => c.phone === phone);
     if (!existing) return {};
+    const updatedCustomer = { ...existing, points: Math.max(0, existing.points - points) };
+    // Sync redeemed points to backend
+    syncToBackend(() => customersApi.upsert({ ...updatedCustomer, name: updatedCustomer.name || '' }));
     return {
       customers: state.customers.map(c =>
-        c.phone === phone
-          ? { ...c, points: Math.max(0, c.points - points) }
-          : c
+        c.phone === phone ? updatedCustomer : c
       )
     };
   }),

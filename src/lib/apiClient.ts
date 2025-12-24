@@ -139,6 +139,10 @@ export const waiterCallsApi = {
 // Transactions API
 export const transactionsApi = {
   getAll: () => apiFetch<any[]>('/api/transactions'),
+  create: (transaction: any) => apiFetch<any>('/api/transactions', {
+    method: 'POST',
+    body: JSON.stringify(transaction),
+  }),
 };
 
 // Health check
