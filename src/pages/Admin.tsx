@@ -10,7 +10,7 @@ import {
   Plus, Edit, Trash2, LogOut, Settings, LayoutDashboard, 
   UtensilsCrossed, Users, QrCode, History, TrendingUp, ShoppingBag, DollarSign,
   Download, Search, Eye, UserCog, BarChart3, Calendar, Image as ImageIcon, ToggleLeft, ToggleRight,
-  Check, X, Menu as MenuIcon, MonitorDot, ChevronUp, ChevronDown, GripVertical
+  Check, X, Menu as MenuIcon, MonitorDot, GripVertical
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -1921,7 +1921,7 @@ export default function Admin() {
 
             <p className="text-xs text-muted-foreground">
               <GripVertical className="w-3 h-3 inline mr-1" />
-              Use arrows to reorder categories. Order affects how they appear to customers.
+              Drag and drop to reorder categories. Order affects how they appear to customers.
             </p>
             
             {/* Category list - sorted by sortOrder */}
@@ -1929,8 +1929,37 @@ export default function Admin() {
               {categories.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4">No categories yet. Add one above.</p>
               ) : (
-                [...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((cat, index, sortedCats) => (
-                  <div key={cat.id} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                [...categories].sort((a, b) => a.sortOrder - b.sortOrder).map((cat, index) => (
+                  <div 
+                    key={cat.id} 
+                    className="flex items-center gap-2 p-2 bg-muted rounded-lg transition-all"
+                    draggable={editingCategory?.id !== cat.id}
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', String(index));
+                      (e.currentTarget as HTMLElement).classList.add('opacity-50');
+                    }}
+                    onDragEnd={(e) => {
+                      (e.currentTarget as HTMLElement).classList.remove('opacity-50');
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      (e.currentTarget as HTMLElement).classList.add('ring-2', 'ring-primary');
+                    }}
+                    onDragLeave={(e) => {
+                      (e.currentTarget as HTMLElement).classList.remove('ring-2', 'ring-primary');
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      (e.currentTarget as HTMLElement).classList.remove('ring-2', 'ring-primary');
+                      const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                      if (fromIndex !== index) {
+                        reorderCategories(fromIndex, index);
+                        toast.success('Category reordered');
+                      }
+                    }}
+                  >
                     {editingCategory?.id === cat.id ? (
                       <>
                         <Input 
@@ -1963,33 +1992,8 @@ export default function Admin() {
                       </>
                     ) : (
                       <>
-                        {/* Move Up/Down buttons */}
-                        <div className="flex flex-col">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-5 w-5 p-0"
-                            disabled={index === 0}
-                            onClick={() => {
-                              reorderCategories(index, index - 1);
-                              toast.success('Category moved up');
-                            }}
-                          >
-                            <ChevronUp className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-5 w-5 p-0"
-                            disabled={index === sortedCats.length - 1}
-                            onClick={() => {
-                              reorderCategories(index, index + 1);
-                              toast.success('Category moved down');
-                            }}
-                          >
-                            <ChevronDown className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        {/* Drag handle */}
+                        <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab active:cursor-grabbing" />
                         
                         <span className="flex-1 font-medium">{cat.name}</span>
                         <span className="text-xs text-muted-foreground">
