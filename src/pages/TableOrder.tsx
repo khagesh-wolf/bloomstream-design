@@ -140,8 +140,10 @@ export default function TableOrder() {
     setLockedTable(table);
   }, [table, settings.tableCount, navigate]);
 
-  // Build category list: dynamic categories from store (Favorites removed from default)
-  const categoryNames = ['Favorites', ...categories.map(c => c.name)];
+  // Build category list: only show Favorites if there are favorites
+  const categoryNames = favorites.length > 0 
+    ? ['Favorites', ...categories.map(c => c.name)]
+    : categories.map(c => c.name);
   
   // Set initial category to first real category (not Favorites)
   useEffect(() => {
