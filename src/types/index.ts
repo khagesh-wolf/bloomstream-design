@@ -86,6 +86,8 @@ export interface Settings {
   facebookUrl?: string;
   tiktokUrl?: string;
   googleReviewUrl?: string;
+  // Admin-less mode: counter gets full admin access
+  counterAsAdmin?: boolean;
 }
 
 export interface DashboardStats {

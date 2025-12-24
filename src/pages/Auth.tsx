@@ -22,7 +22,8 @@ export default function Auth() {
 
   // Redirect if already logged in
   if (isAuthenticated && currentUser) {
-    if (currentUser.role === 'admin') {
+    // Counter users go to admin if counterAsAdmin is enabled
+    if (currentUser.role === 'admin' || settings.counterAsAdmin) {
       navigate('/admin');
     } else {
       navigate('/counter');
@@ -61,7 +62,9 @@ export default function Auth() {
     if (success) {
       toast.success('Login successful!');
       const user = useStore.getState().currentUser;
-      if (user?.role === 'admin') {
+      const currentSettings = useStore.getState().settings;
+      // Counter users go to admin if counterAsAdmin is enabled
+      if (user?.role === 'admin' || currentSettings.counterAsAdmin) {
         navigate('/admin');
       } else {
         navigate('/counter');

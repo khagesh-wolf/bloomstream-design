@@ -92,8 +92,12 @@ export default function Admin() {
     );
   }
 
-  // Redirect if not authenticated or not admin
-  if (!isAuthenticated || currentUser?.role !== 'admin') {
+  // Redirect if not authenticated or not authorized
+  // Allow access if admin OR if counterAsAdmin is enabled for counter users
+  const isAuthorized = currentUser?.role === 'admin' || 
+    (currentUser?.role === 'counter' && settings.counterAsAdmin);
+  
+  if (!isAuthenticated || !isAuthorized) {
     navigate('/auth');
     return null;
   }
@@ -482,127 +486,131 @@ export default function Admin() {
   };
 
   const printAllQR = () => {
-    // Generate QR codes locally using canvas
-    const generateQRDataURL = (data: string): Promise<string> => {
-      return new Promise((resolve) => {
-        // Create a temporary container for the QR code
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        document.body.appendChild(tempDiv);
-        
-        // Import QRCode and render to canvas
-        import('qrcode.react').then(({ QRCodeCanvas }) => {
-          const React = require('react');
-          const ReactDOM = require('react-dom/client');
-          
-          const root = ReactDOM.createRoot(tempDiv);
-          root.render(React.createElement(QRCodeCanvas, { 
-            value: data, 
-            size: 120,
-            level: 'M'
-          }));
-          
-          setTimeout(() => {
-            const canvas = tempDiv.querySelector('canvas');
-            if (canvas) {
-              resolve(canvas.toDataURL('image/png'));
-            } else {
-              resolve('');
-            }
-            root.unmount();
-            document.body.removeChild(tempDiv);
-          }, 100);
-        });
-      });
-    };
-
-    // WiFi QR Code data
     const wifiQRData = settings.wifiSSID 
       ? `WIFI:T:WPA;S:${settings.wifiSSID};P:${settings.wifiPassword};;`
       : '';
 
-    // Generate all QR codes first, then open print window
-    const generateAllQRCodes = async () => {
-      const tableQRs: { tableNum: number; tableQR: string; wifiQR: string }[] = [];
-      
-      // Generate WiFi QR once if configured
-      let wifiQR = '';
-      if (settings.wifiSSID) {
-        wifiQR = await generateQRDataURL(wifiQRData);
-      }
-      
-      // Generate table QRs
-      for (let i = 1; i <= settings.tableCount; i++) {
-        const tableURL = `${settings.baseUrl || window.location.origin}/table/${i}`;
-        const tableQR = await generateQRDataURL(tableURL);
-        tableQRs.push({ tableNum: i, tableQR, wifiQR });
-      }
-      
-      return tableQRs;
-    };
+    // Build table data
+    const tables: { num: number; url: string }[] = [];
+    for (let i = 1; i <= settings.tableCount; i++) {
+      tables.push({
+        num: i,
+        url: `${settings.baseUrl || window.location.origin}/table/${i}`
+      });
+    }
 
-    toast.info('Generating QR codes...');
-    
-    generateAllQRCodes().then((qrData) => {
-      const tableCards = qrData.map(({ tableNum, tableQR, wifiQR }) => `
-        <div style="page-break-inside: avoid; text-align: center; padding: 20px; border: 1px solid #ddd; border-radius: 12px; background: #fff; width: 200px; margin: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-          <!-- WiFi QR Section -->
-          <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #ddd;">
-            <p style="margin: 0 0 8px; font-size: 12px; font-weight: bold; color: #333;">📶 Free WiFi</p>
-            ${wifiQR ? `
-              <img src="${wifiQR}" style="display: block; margin: 0 auto; width: 120px; height: 120px;" />
-              <p style="margin: 6px 0 0; font-size: 9px; color: #666;">${settings.wifiSSID}</p>
-            ` : `
-              <div style="width: 120px; height: 120px; background: #f5f5f5; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
-                <span style="font-size: 10px; color: #999;">No WiFi configured</span>
-              </div>
-            `}
-          </div>
-          
-          <!-- Table QR Section -->
-          <div>
-            <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold; color: #333;">🍵 Table ${tableNum}</p>
-            <img src="${tableQR}" style="display: block; margin: 0 auto; width: 120px; height: 120px;" />
-            <p style="margin: 8px 0 0; font-size: 10px; color: #666;">${settings.restaurantName}</p>
-          </div>
+    toast.info('Opening print preview...');
+
+    // Open print window with QR library loaded via CDN
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast.error('Please allow popups to print QR codes');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>QR Codes - ${settings.restaurantName}</title>
+        <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"><\/script>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f9f9f9; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .header h1 { font-size: 24px; margin-bottom: 5px; }
+          .header p { color: #666; font-size: 14px; }
+          .cards-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; }
+          .card { 
+            page-break-inside: avoid; 
+            text-align: center; 
+            padding: 20px; 
+            border: 1px solid #ddd; 
+            border-radius: 12px; 
+            background: #fff; 
+            width: 220px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          }
+          .wifi-section { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #ddd; }
+          .wifi-label { font-size: 12px; font-weight: bold; color: #333; margin-bottom: 8px; }
+          .wifi-ssid { font-size: 9px; color: #666; margin-top: 6px; }
+          .table-label { font-size: 14px; font-weight: bold; color: #333; margin-bottom: 8px; }
+          .restaurant-name { font-size: 10px; color: #666; margin-top: 8px; }
+          .qr-container { width: 120px; height: 120px; margin: 0 auto; }
+          .qr-container canvas { width: 100% !important; height: 100% !important; }
+          .no-wifi { width: 120px; height: 120px; background: #f5f5f5; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 10px; color: #999; }
+          @media print { 
+            body { padding: 10px; background: white; } 
+            .card { box-shadow: none; border: 1px solid #ccc; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>${settings.restaurantName}</h1>
+          <p>Table QR Cards</p>
         </div>
-      `).join('');
-      
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-          <head>
-            <title>QR Codes - ${settings.restaurantName}</title>
-            <style>
-              * { box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 20px; background: #f9f9f9; }
-              .cards-grid { display: flex; flex-wrap: wrap; justify-content: center; }
-              @media print { 
-                body { padding: 10px; background: white; } 
-                .cards-grid { gap: 5px; }
+        <div class="cards-grid" id="cards"></div>
+        <script>
+          const tables = ${JSON.stringify(tables)};
+          const wifiData = ${JSON.stringify(wifiQRData)};
+          const wifiSSID = ${JSON.stringify(settings.wifiSSID || '')};
+          const restaurantName = ${JSON.stringify(settings.restaurantName)};
+          
+          async function generateCards() {
+            const container = document.getElementById('cards');
+            
+            for (const table of tables) {
+              const card = document.createElement('div');
+              card.className = 'card';
+              
+              // WiFi section
+              const wifiSection = document.createElement('div');
+              wifiSection.className = 'wifi-section';
+              wifiSection.innerHTML = '<div class="wifi-label">📶 Free WiFi</div>';
+              
+              if (wifiData) {
+                const wifiQR = document.createElement('div');
+                wifiQR.className = 'qr-container';
+                wifiQR.id = 'wifi-' + table.num;
+                wifiSection.appendChild(wifiQR);
+                wifiSection.innerHTML += '<div class="wifi-ssid">' + wifiSSID + '</div>';
+              } else {
+                wifiSection.innerHTML += '<div class="no-wifi">No WiFi configured</div>';
               }
-            </style>
-          </head>
-          <body>
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h1 style="margin: 0 0 5px; font-size: 24px;">${settings.restaurantName}</h1>
-              <p style="margin: 0; color: #666; font-size: 14px;">Table QR Cards</p>
-            </div>
-            <div class="cards-grid">
-              ${tableCards}
-            </div>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        // QR images are already data URLs, so we can print immediately
-        setTimeout(() => {
-          printWindow.print();
-        }, 300);
-      }
-    });
+              card.appendChild(wifiSection);
+              
+              // Table section
+              const tableSection = document.createElement('div');
+              tableSection.innerHTML = '<div class="table-label">🍵 Table ' + table.num + '</div>';
+              const tableQR = document.createElement('div');
+              tableQR.className = 'qr-container';
+              tableQR.id = 'table-' + table.num;
+              tableSection.appendChild(tableQR);
+              tableSection.innerHTML += '<div class="restaurant-name">' + restaurantName + '</div>';
+              card.appendChild(tableSection);
+              
+              container.appendChild(card);
+            }
+            
+            // Generate QR codes
+            for (const table of tables) {
+              if (wifiData) {
+                await QRCode.toCanvas(document.querySelector('#wifi-' + table.num), wifiData, { width: 120, margin: 1 });
+              }
+              await QRCode.toCanvas(document.querySelector('#table-' + table.num), table.url, { width: 120, margin: 1 });
+            }
+            
+            // Auto-print after generation
+            setTimeout(() => window.print(), 500);
+          }
+          
+          generateCards();
+        <\/script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const navItems = [
@@ -1252,6 +1260,26 @@ export default function Admin() {
                         Use hostname.local instead of IP to avoid issues when IP changes. 
                         Click "Use Hostname" to set up.
                       </p>
+                    </div>
+                    
+                    {/* Counter as Admin Toggle */}
+                    <div className="pt-4 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium">Counter as Admin Mode</label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            When enabled, counter staff can access all admin features.<br/>
+                            Useful for single-person operations without separate admin.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={settings.counterAsAdmin || false}
+                          onCheckedChange={(checked) => {
+                            updateSettings({ counterAsAdmin: checked });
+                            toast.success(checked ? 'Counter staff now have admin access' : 'Counter staff have standard access');
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
