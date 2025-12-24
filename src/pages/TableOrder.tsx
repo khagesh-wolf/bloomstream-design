@@ -17,7 +17,8 @@ import {
   Bell,
   Instagram,
   Facebook,
-  Star
+  Star,
+  UtensilsCrossed
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatNepalTime } from '@/lib/nepalTime';
@@ -882,7 +883,7 @@ export default function TableOrder() {
               : 'bg-primary text-white'
           }`}
         >
-          <Plus className="w-6 h-6" />
+          {fabOpen ? <Plus className="w-6 h-6" /> : <UtensilsCrossed className="w-6 h-6" />}
         </button>
       </div>
 
