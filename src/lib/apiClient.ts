@@ -1,0 +1,152 @@
+// API Client for SQLite Backend
+// Configure this to point to your backend server
+
+const API_BASE_URL = localStorage.getItem('api_base_url') || 'http://localhost:3001';
+
+export const setApiBaseUrl = (url: string) => {
+  localStorage.setItem('api_base_url', url);
+  window.location.reload();
+};
+
+export const getApiBaseUrl = () => {
+  return localStorage.getItem('api_base_url') || 'http://localhost:3001';
+};
+
+// Generic fetch wrapper with error handling
+async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const url = `${getApiBaseUrl()}${endpoint}`;
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Network error' }));
+    throw new Error(error.message || `HTTP ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// Menu Items API
+export const menuApi = {
+  getAll: () => apiFetch<any[]>('/api/menu'),
+  create: (item: any) => apiFetch<any>('/api/menu', {
+    method: 'POST',
+    body: JSON.stringify(item),
+  }),
+  update: (id: string, item: any) => apiFetch<any>(`/api/menu/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(item),
+  }),
+  delete: (id: string) => apiFetch<void>(`/api/menu/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Orders API
+export const ordersApi = {
+  getAll: () => apiFetch<any[]>('/api/orders'),
+  create: (order: any) => apiFetch<any>('/api/orders', {
+    method: 'POST',
+    body: JSON.stringify(order),
+  }),
+  updateStatus: (id: string, status: string) => apiFetch<any>(`/api/orders/${id}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  }),
+};
+
+// Bills API
+export const billsApi = {
+  getAll: () => apiFetch<any[]>('/api/bills'),
+  create: (bill: any) => apiFetch<any>('/api/bills', {
+    method: 'POST',
+    body: JSON.stringify(bill),
+  }),
+  pay: (id: string, paymentMethod: string) => apiFetch<any>(`/api/bills/${id}/pay`, {
+    method: 'PUT',
+    body: JSON.stringify({ paymentMethod }),
+  }),
+};
+
+// Customers API
+export const customersApi = {
+  getAll: () => apiFetch<any[]>('/api/customers'),
+  getByPhone: (phone: string) => apiFetch<any>(`/api/customers/${phone}`),
+  upsert: (customer: any) => apiFetch<any>('/api/customers', {
+    method: 'POST',
+    body: JSON.stringify(customer),
+  }),
+};
+
+// Staff API
+export const staffApi = {
+  getAll: () => apiFetch<any[]>('/api/staff'),
+  create: (staff: any) => apiFetch<any>('/api/staff', {
+    method: 'POST',
+    body: JSON.stringify(staff),
+  }),
+  update: (id: string, staff: any) => apiFetch<any>(`/api/staff/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(staff),
+  }),
+  delete: (id: string) => apiFetch<void>(`/api/staff/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Settings API
+export const settingsApi = {
+  get: () => apiFetch<any>('/api/settings'),
+  update: (settings: any) => apiFetch<any>('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings),
+  }),
+};
+
+// Expenses API
+export const expensesApi = {
+  getAll: () => apiFetch<any[]>('/api/expenses'),
+  create: (expense: any) => apiFetch<any>('/api/expenses', {
+    method: 'POST',
+    body: JSON.stringify(expense),
+  }),
+  delete: (id: string) => apiFetch<void>(`/api/expenses/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Waiter Calls API
+export const waiterCallsApi = {
+  getAll: () => apiFetch<any[]>('/api/waiter-calls'),
+  create: (call: any) => apiFetch<any>('/api/waiter-calls', {
+    method: 'POST',
+    body: JSON.stringify(call),
+  }),
+  acknowledge: (id: string) => apiFetch<any>(`/api/waiter-calls/${id}/acknowledge`, {
+    method: 'PUT',
+  }),
+  dismiss: (id: string) => apiFetch<void>(`/api/waiter-calls/${id}`, {
+    method: 'DELETE',
+  }),
+};
+
+// Transactions API
+export const transactionsApi = {
+  getAll: () => apiFetch<any[]>('/api/transactions'),
+};
+
+// Health check
+export const checkBackendHealth = async (): Promise<boolean> => {
+  try {
+    await apiFetch<{ status: string }>('/api/health');
+    return true;
+  } catch {
+    return false;
+  }
+};

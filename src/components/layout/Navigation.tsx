@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Coffee, ChefHat, CreditCard, LayoutDashboard, Settings } from 'lucide-react';
+import { BackendConfig } from '@/components/BackendConfig';
 
 const navItems = [
   { path: '/', label: 'Hub', icon: LayoutDashboard },
@@ -46,6 +47,7 @@ export function Navigation() {
                 </Link>
               );
             })}
+            <BackendConfig />
           </div>
         </div>
       </div>
