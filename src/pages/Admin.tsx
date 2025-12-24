@@ -708,57 +708,66 @@ export default function Admin() {
 
         {/* Dashboard */}
         {tab === 'dashboard' && (
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {/* Date Range Filter */}
-            <div className="flex flex-wrap gap-2 md:gap-4 items-center bg-card p-3 md:p-4 rounded-xl border border-border">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <Input
-                type="date"
-                value={dashboardDateFrom}
-                onChange={e => setDashboardDateFrom(e.target.value)}
-                className="w-40"
-              />
-              <span>to</span>
-              <Input
-                type="date"
-                value={dashboardDateTo}
-                onChange={e => setDashboardDateTo(e.target.value)}
-                className="w-40"
-              />
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  const today = getNepalTodayString();
-                  setDashboardDateFrom(today);
-                  setDashboardDateTo(today);
-                }}
-              >
-                Today
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setDashboardDateFrom(getNepalDateDaysAgo(7));
-                  setDashboardDateTo(getNepalTodayString());
-                }}
-              >
-                Last 7 Days
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setDashboardDateFrom(getNepalDateDaysAgo(30));
-                  setDashboardDateTo(getNepalTodayString());
-                }}
-              >
-                Last 30 Days
-              </Button>
+            <div className="bg-card p-3 md:p-4 rounded-xl border border-border space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4" />
+                <span className="font-medium">Date Range</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  value={dashboardDateFrom}
+                  onChange={e => setDashboardDateFrom(e.target.value)}
+                  className="w-full text-sm"
+                />
+                <Input
+                  type="date"
+                  value={dashboardDateTo}
+                  onChange={e => setDashboardDateTo(e.target.value)}
+                  className="w-full text-sm"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1 min-w-[80px] text-xs md:text-sm"
+                  onClick={() => {
+                    const today = getNepalTodayString();
+                    setDashboardDateFrom(today);
+                    setDashboardDateTo(today);
+                  }}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1 min-w-[80px] text-xs md:text-sm"
+                  onClick={() => {
+                    setDashboardDateFrom(getNepalDateDaysAgo(7));
+                    setDashboardDateTo(getNepalTodayString());
+                  }}
+                >
+                  7 Days
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="flex-1 min-w-[80px] text-xs md:text-sm"
+                  onClick={() => {
+                    setDashboardDateFrom(getNepalDateDaysAgo(30));
+                    setDashboardDateTo(getNepalTodayString());
+                  }}
+                >
+                  30 Days
+                </Button>
+              </div>
             </div>
 
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               <StatCard icon={DollarSign} label="Total Revenue" value={`रू ${dashboardData.totalRevenue}`} color="primary" />
               <StatCard icon={ShoppingBag} label="Total Orders" value={dashboardData.totalOrders.toString()} color="success" />
               <StatCard icon={TrendingUp} label="Avg Order Value" value={`रू ${dashboardData.avgOrderValue}`} color="accent" />
@@ -766,26 +775,26 @@ export default function Admin() {
             </div>
 
             {/* Quick Charts - Now use dashboard date range */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Revenue Trend</h3>
-                <ResponsiveContainer width="100%" height={200}>
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Revenue Trend</h3>
+                <ResponsiveContainer width="100%" height={180}>
                   <LineChart data={dashboardData.dailyRevenue}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" height={50} />
+                    <YAxis tick={{ fontSize: 9 }} width={45} />
                     <Tooltip />
                     <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Top Selling Items</h3>
-                <ResponsiveContainer width="100%" height={200}>
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Top Selling Items</h3>
+                <ResponsiveContainer width="100%" height={180}>
                   <BarChart data={dashboardData.topItems} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={80} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={60} />
                     <Tooltip />
                     <Bar dataKey="qty" fill="hsl(var(--primary))" radius={4} />
                   </BarChart>
@@ -797,33 +806,37 @@ export default function Admin() {
 
         {/* Analytics */}
         {tab === 'analytics' && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold">Analytics & Reports</h2>
-              <Button onClick={exportAnalyticsCSV} className="gradient-primary">
+          <div className="space-y-4 md:space-y-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <h2 className="text-lg md:text-2xl font-bold">Analytics & Reports</h2>
+              <Button onClick={exportAnalyticsCSV} className="gradient-primary w-full sm:w-auto">
                 <Download className="w-4 h-4 mr-2" /> Export CSV
               </Button>
             </div>
 
-            <div className="flex gap-4 items-center bg-card p-4 rounded-xl border border-border">
-              <Calendar className="w-5 h-5 text-muted-foreground" />
-              <Input
-                type="date"
-                value={analyticsDateFrom}
-                onChange={e => setAnalyticsDateFrom(e.target.value)}
-                className="w-40"
-              />
-              <span>to</span>
-              <Input
-                type="date"
-                value={analyticsDateTo}
-                onChange={e => setAnalyticsDateTo(e.target.value)}
-                className="w-40"
-              />
+            <div className="bg-card p-3 md:p-4 rounded-xl border border-border space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4" />
+                <span className="font-medium">Date Range</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  type="date"
+                  value={analyticsDateFrom}
+                  onChange={e => setAnalyticsDateFrom(e.target.value)}
+                  className="w-full text-sm"
+                />
+                <Input
+                  type="date"
+                  value={analyticsDateTo}
+                  onChange={e => setAnalyticsDateTo(e.target.value)}
+                  className="w-full text-sm"
+                />
+              </div>
             </div>
 
             {/* Summary Cards */}
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
               <StatCard icon={DollarSign} label="Total Revenue" value={`रू ${analytics.totalRevenue}`} color="primary" />
               <StatCard icon={ShoppingBag} label="Total Orders" value={analytics.totalOrders.toString()} color="success" />
               <StatCard icon={TrendingUp} label="Avg Order Value" value={`रू ${analytics.avgOrderValue}`} color="accent" />
@@ -831,10 +844,10 @@ export default function Admin() {
             </div>
 
             {/* Payment Methods Summary */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="p-6 bg-[#f0f9f4] rounded-2xl border border-[#27ae60]/20">
-                <div className="text-sm text-muted-foreground mb-1">Cash Payments</div>
-                <div className="text-3xl font-bold text-[#27ae60]">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+              <div className="p-4 md:p-6 bg-[#f0f9f4] rounded-2xl border border-[#27ae60]/20">
+                <div className="text-xs md:text-sm text-muted-foreground mb-1">Cash Payments</div>
+                <div className="text-xl md:text-3xl font-bold text-[#27ae60]">
                   रू {analytics.cashTotal.toLocaleString()}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -843,9 +856,9 @@ export default function Admin() {
                     : '0%'}
                 </div>
               </div>
-              <div className="p-6 bg-[#fdf0f4] rounded-2xl border border-[#c32148]/20">
-                <div className="text-sm text-muted-foreground mb-1">Fonepay Payments</div>
-                <div className="text-3xl font-bold text-[#c32148]">
+              <div className="p-4 md:p-6 bg-[#fdf0f4] rounded-2xl border border-[#c32148]/20">
+                <div className="text-xs md:text-sm text-muted-foreground mb-1">Fonepay Payments</div>
+                <div className="text-xl md:text-3xl font-bold text-[#c32148]">
                   रू {analytics.fonepayTotal.toLocaleString()}
                 </div>
                 <div className="text-xs text-muted-foreground mt-1">
@@ -857,55 +870,55 @@ export default function Admin() {
             </div>
 
             {/* Charts */}
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Daily Revenue</h3>
-                <ResponsiveContainer width="100%" height={250}>
+            <div className="grid md:grid-cols-2 gap-4 md:gap-6">
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Daily Revenue</h3>
+                <ResponsiveContainer width="100%" height={200}>
                   <LineChart data={analytics.dailyRevenue}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="date" tick={{ fontSize: 9 }} angle={-45} textAnchor="end" height={50} />
+                    <YAxis tick={{ fontSize: 9 }} width={45} />
                     <Tooltip />
                     <Line type="monotone" dataKey="amount" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Payment Methods (Order Count)</h3>
-                <ResponsiveContainer width="100%" height={250}>
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Payment Methods</h3>
+                <ResponsiveContainer width="100%" height={200}>
                   <PieChart>
-                    <Pie data={analytics.paymentMethods} cx="50%" cy="50%" outerRadius={80} dataKey="value" label>
+                    <Pie data={analytics.paymentMethods} cx="50%" cy="50%" outerRadius={60} dataKey="value" label>
                       {analytics.paymentMethods.map((_, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Top 10 Items by Quantity</h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Top 10 Items by Quantity</h3>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={analytics.topItems} layout="vertical">
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={100} />
+                    <XAxis type="number" tick={{ fontSize: 9 }} />
+                    <YAxis dataKey="name" type="category" tick={{ fontSize: 9 }} width={70} />
                     <Tooltip />
                     <Bar dataKey="qty" fill="hsl(var(--primary))" radius={4} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="bg-card p-6 rounded-2xl border border-border">
-                <h3 className="font-bold mb-4">Peak Hours</h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <div className="bg-card p-4 md:p-6 rounded-2xl border border-border">
+                <h3 className="font-bold mb-4 text-sm md:text-base">Peak Hours</h3>
+                <ResponsiveContainer width="100%" height={250}>
                   <BarChart data={analytics.peakHours.filter(h => h.orders > 0)}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="hour" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
+                    <XAxis dataKey="hour" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} />
                     <Tooltip />
                     <Bar dataKey="orders" fill="hsl(var(--success))" radius={4} />
                   </BarChart>
@@ -918,41 +931,43 @@ export default function Admin() {
         {/* Menu */}
         {tab === 'menu' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Menu Management</h2>
-              <div className="flex gap-3">
-                {selectedMenuItems.length > 0 && (
-                  <div className="flex gap-2 items-center">
-                    <span className="text-sm text-muted-foreground">{selectedMenuItems.length} selected</span>
-                    <Button variant="outline" size="sm" onClick={() => handleBulkToggle(true)}>
-                      <ToggleRight className="w-4 h-4 mr-1" /> Enable All
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleBulkToggle(false)}>
-                      <ToggleLeft className="w-4 h-4 mr-1" /> Disable All
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedMenuItems([])}>
-                      Clear
-                    </Button>
-                  </div>
-                )}
-                <Button variant="outline" onClick={() => setShowCategoryManager(true)}>
-                  <Settings className="w-4 h-4 mr-2" /> Categories
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold">Menu Management</h2>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setShowCategoryManager(true)}>
+                  <Settings className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Categories</span>
                 </Button>
-                <Button onClick={() => setIsAddingItem(true)} className="gradient-primary">
-                  <Plus className="w-4 h-4 mr-2" /> Add Item
+                <Button onClick={() => setIsAddingItem(true)} size="sm" className="gradient-primary">
+                  <Plus className="w-4 h-4 md:mr-2" /> <span className="hidden md:inline">Add Item</span>
                 </Button>
               </div>
             </div>
+
+            {/* Bulk Actions */}
+            {selectedMenuItems.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center mb-4 p-3 bg-muted rounded-lg">
+                <span className="text-sm text-muted-foreground">{selectedMenuItems.length} selected</span>
+                <Button variant="outline" size="sm" onClick={() => handleBulkToggle(true)}>
+                  <ToggleRight className="w-4 h-4 mr-1" /> Enable
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkToggle(false)}>
+                  <ToggleLeft className="w-4 h-4 mr-1" /> Disable
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedMenuItems([])}>
+                  Clear
+                </Button>
+              </div>
+            )}
             
             {/* Search */}
-            <div className="mb-6">
-              <div className="relative max-w-md">
+            <div className="mb-4 md:mb-6">
+              <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search menu items..."
                   value={menuSearch}
                   onChange={e => setMenuSearch(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full md:max-w-md"
                 />
               </div>
             </div>
@@ -965,7 +980,7 @@ export default function Admin() {
               const allSelected = allCatItems.length > 0 && allCatItems.every(m => selectedMenuItems.includes(m.id));
               
               return (
-                <div key={cat.id} className="mb-8">
+                <div key={cat.id} className="mb-6 md:mb-8">
                   <div className="flex items-center gap-3 mb-3">
                     <input
                       type="checkbox"
@@ -973,14 +988,14 @@ export default function Admin() {
                       onChange={() => selectAllInCategory(cat.name)}
                       className="w-4 h-4 rounded border-border accent-primary"
                     />
-                    <h3 className="font-bold text-lg text-primary">{cat.name}</h3>
-                    <span className="text-sm text-muted-foreground">({catItems.length} items)</span>
+                    <h3 className="font-bold text-base md:text-lg text-primary">{cat.name}</h3>
+                    <span className="text-xs md:text-sm text-muted-foreground">({catItems.length} items)</span>
                   </div>
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                     {(menuSearch ? catItems : allCatItems).map(item => (
                       <div 
                         key={item.id} 
-                        className={`bg-card rounded-xl border border-border p-4 transition-all ${!item.available ? 'opacity-50' : ''} ${selectedMenuItems.includes(item.id) ? 'ring-2 ring-primary' : ''}`}
+                        className={`bg-card rounded-xl border border-border p-3 md:p-4 transition-all ${!item.available ? 'opacity-50' : ''} ${selectedMenuItems.includes(item.id) ? 'ring-2 ring-primary' : ''}`}
                       >
                         <div className="flex gap-3">
                           <input
@@ -993,25 +1008,25 @@ export default function Admin() {
                             <img 
                               src={item.image} 
                               alt={item.name} 
-                              className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                              className="w-12 h-12 md:w-16 md:h-16 rounded-lg object-cover flex-shrink-0"
                             />
                           ) : (
-                            <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                              <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                              <ImageIcon className="w-5 h-5 md:w-6 md:h-6 text-muted-foreground" />
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold truncate">{item.name}</h4>
-                            <p className="text-primary font-bold">रू {item.price}</p>
+                            <h4 className="font-semibold truncate text-sm md:text-base">{item.name}</h4>
+                            <p className="text-primary font-bold text-sm md:text-base">रू {item.price}</p>
                             {item.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{item.description}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-1 hidden sm:block">{item.description}</p>
                             )}
                           </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-border">
                           <button 
                             onClick={() => toggleItemAvailability(item.id)} 
-                            className={`text-sm px-2 py-1 rounded ${item.available ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}
+                            className={`text-xs md:text-sm px-2 py-1 rounded ${item.available ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}
                           >
                             {item.available ? 'Available' : 'Unavailable'}
                           </button>
@@ -1034,60 +1049,100 @@ export default function Admin() {
         {/* Customers */}
         {tab === 'customers' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Customers</h2>
-              <div className="flex gap-3">
-                <div className="relative">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold">Customers</h2>
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-initial">
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder="Search phone or name..."
                     value={customerSearch}
                     onChange={e => setCustomerSearch(e.target.value)}
-                    className="pl-10 w-64"
+                    className="pl-10 w-full sm:w-64"
                   />
                 </div>
-                <Button onClick={exportCustomersCSV} variant="outline">
-                  <Download className="w-4 h-4 mr-2" /> Export CSV
+                <Button onClick={exportCustomersCSV} variant="outline" className="w-full sm:w-auto">
+                  <Download className="w-4 h-4 mr-2" /> Export
                 </Button>
               </div>
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-4">Phone</th>
-                    <th className="text-left p-4">Name</th>
-                    <th className="text-left p-4">Orders</th>
-                    <th className="text-left p-4">Total Spent</th>
-                    <th className="text-left p-4">Points</th>
-                    <th className="text-left p-4">Last Visit</th>
-                    <th className="text-left p-4">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCustomers.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No customers found</td></tr>
-                  ) : filteredCustomers.map(c => (
-                    <tr key={c.phone} className="border-t border-border hover:bg-muted/50">
-                      <td className="p-4 font-mono">{c.phone}</td>
-                      <td className="p-4">{c.name || '-'}</td>
-                      <td className="p-4">{c.totalOrders}</td>
-                      <td className="p-4 font-bold">रू {c.totalSpent}</td>
-                      <td className="p-4">
-                        <span className="bg-warning/10 text-warning px-2 py-1 rounded-full text-sm">
-                          ⭐ {c.points}
-                        </span>
-                      </td>
-                      <td className="p-4 text-muted-foreground">{formatNepalDateReadable(c.lastVisit)}</td>
-                      <td className="p-4">
-                        <Button size="sm" variant="ghost" onClick={() => setCustomerDetailModal(c)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </td>
+            
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {filteredCustomers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border border-border">No customers found</div>
+              ) : filteredCustomers.map(c => (
+                <div key={c.phone} className="bg-card rounded-xl border border-border p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <p className="font-mono text-sm">{c.phone}</p>
+                      <p className="font-medium">{c.name || 'No name'}</p>
+                    </div>
+                    <span className="bg-warning/10 text-warning px-2 py-1 rounded-full text-xs">
+                      ⭐ {c.points}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs mb-3">
+                    <div className="bg-muted rounded-lg p-2">
+                      <p className="text-muted-foreground">Orders</p>
+                      <p className="font-bold">{c.totalOrders}</p>
+                    </div>
+                    <div className="bg-muted rounded-lg p-2">
+                      <p className="text-muted-foreground">Spent</p>
+                      <p className="font-bold text-primary">रू {c.totalSpent}</p>
+                    </div>
+                    <div className="bg-muted rounded-lg p-2">
+                      <p className="text-muted-foreground">Last Visit</p>
+                      <p className="font-bold">{formatNepalDateReadable(c.lastVisit).split(',')[0]}</p>
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => setCustomerDetailModal(c)}>
+                    <Eye className="w-4 h-4 mr-2" /> View Details
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-4">Phone</th>
+                      <th className="text-left p-4">Name</th>
+                      <th className="text-left p-4">Orders</th>
+                      <th className="text-left p-4">Total Spent</th>
+                      <th className="text-left p-4">Points</th>
+                      <th className="text-left p-4">Last Visit</th>
+                      <th className="text-left p-4">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredCustomers.length === 0 ? (
+                      <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No customers found</td></tr>
+                    ) : filteredCustomers.map(c => (
+                      <tr key={c.phone} className="border-t border-border hover:bg-muted/50">
+                        <td className="p-4 font-mono">{c.phone}</td>
+                        <td className="p-4">{c.name || '-'}</td>
+                        <td className="p-4">{c.totalOrders}</td>
+                        <td className="p-4 font-bold">रू {c.totalSpent}</td>
+                        <td className="p-4">
+                          <span className="bg-warning/10 text-warning px-2 py-1 rounded-full text-sm">
+                            ⭐ {c.points}
+                          </span>
+                        </td>
+                        <td className="p-4 text-muted-foreground">{formatNepalDateReadable(c.lastVisit)}</td>
+                        <td className="p-4">
+                          <Button size="sm" variant="ghost" onClick={() => setCustomerDetailModal(c)}>
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -1095,67 +1150,106 @@ export default function Admin() {
         {/* History */}
         {tab === 'history' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Transaction History</h2>
-              <Button onClick={exportHistoryCSV} variant="outline">
-                <Download className="w-4 h-4 mr-2" /> Export CSV
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <h2 className="text-lg md:text-2xl font-bold">Transaction History</h2>
+              <Button onClick={exportHistoryCSV} variant="outline" size="sm" className="w-full sm:w-auto">
+                <Download className="w-4 h-4 mr-2" /> Export
               </Button>
             </div>
-            <div className="flex gap-3 mb-4">
+            
+            {/* Filters */}
+            <div className="space-y-3 mb-4">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   placeholder="Search table or phone..."
                   value={historySearch}
                   onChange={e => setHistorySearch(e.target.value)}
-                  className="pl-10 w-64"
+                  className="pl-10 w-full"
                 />
               </div>
-              <Input
-                type="date"
-                value={historyDateFrom}
-                onChange={e => setHistoryDateFrom(e.target.value)}
-                className="w-40"
-              />
-              <Input
-                type="date"
-                value={historyDateTo}
-                onChange={e => setHistoryDateTo(e.target.value)}
-                className="w-40"
-              />
-              <Button variant="outline" onClick={() => { setHistorySearch(''); setHistoryDateFrom(''); setHistoryDateTo(''); }}>
-                Clear
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Input
+                  type="date"
+                  value={historyDateFrom}
+                  onChange={e => setHistoryDateFrom(e.target.value)}
+                  className="flex-1 min-w-[130px]"
+                />
+                <Input
+                  type="date"
+                  value={historyDateTo}
+                  onChange={e => setHistoryDateTo(e.target.value)}
+                  className="flex-1 min-w-[130px]"
+                />
+                <Button variant="outline" size="sm" onClick={() => { setHistorySearch(''); setHistoryDateFrom(''); setHistoryDateTo(''); }}>
+                  Clear
+                </Button>
+              </div>
             </div>
-            <div className="bg-card rounded-xl border border-border overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-muted">
-                  <tr>
-                    <th className="text-left p-4">Time</th>
-                    <th className="text-left p-4">Table</th>
-                    <th className="text-left p-4">Customers</th>
-                    <th className="text-left p-4">Items</th>
-                    <th className="text-left p-4">Discount</th>
-                    <th className="text-left p-4">Total</th>
-                    <th className="text-left p-4">Method</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTransactions.length === 0 ? (
-                    <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No transactions found</td></tr>
-                  ) : filteredTransactions.slice(0, 50).map(t => (
-                    <tr key={t.id} className="border-t border-border hover:bg-muted/50">
-                      <td className="p-4">{formatNepalDateTime(t.paidAt)}</td>
-                      <td className="p-4">Table {t.tableNumber}</td>
-                      <td className="p-4">{t.customerPhones.join(', ') || 'Guest'}</td>
-                      <td className="p-4 text-sm max-w-xs truncate">{t.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</td>
-                      <td className="p-4">{t.discount > 0 ? `-रू${t.discount}` : '-'}</td>
-                      <td className="p-4 font-bold">रू {t.total}</td>
-                      <td className="p-4">{t.paymentMethod.toUpperCase()}</td>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {filteredTransactions.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground bg-card rounded-xl border border-border">No transactions found</div>
+              ) : filteredTransactions.slice(0, 50).map(t => (
+                <div key={t.id} className="bg-card rounded-xl border border-border p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-bold">Table {t.tableNumber}</p>
+                      <p className="text-xs text-muted-foreground">{formatNepalDateTime(t.paidAt)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-primary">रू {t.total}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded ${t.paymentMethod === 'cash' ? 'bg-success/10 text-success' : 'bg-accent/10 text-accent'}`}>
+                        {t.paymentMethod.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    {t.customerPhones.length > 0 ? t.customerPhones.join(', ') : 'Guest'}
+                  </div>
+                  <div className="text-sm bg-muted rounded-lg p-2">
+                    <p className="line-clamp-2">{t.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</p>
+                  </div>
+                  {t.discount > 0 && (
+                    <p className="text-xs text-destructive mt-2">Discount: -रू{t.discount}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-card rounded-xl border border-border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-muted">
+                    <tr>
+                      <th className="text-left p-4">Time</th>
+                      <th className="text-left p-4">Table</th>
+                      <th className="text-left p-4">Customers</th>
+                      <th className="text-left p-4">Items</th>
+                      <th className="text-left p-4">Discount</th>
+                      <th className="text-left p-4">Total</th>
+                      <th className="text-left p-4">Method</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredTransactions.length === 0 ? (
+                      <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No transactions found</td></tr>
+                    ) : filteredTransactions.slice(0, 50).map(t => (
+                      <tr key={t.id} className="border-t border-border hover:bg-muted/50">
+                        <td className="p-4">{formatNepalDateTime(t.paidAt)}</td>
+                        <td className="p-4">Table {t.tableNumber}</td>
+                        <td className="p-4">{t.customerPhones.join(', ') || 'Guest'}</td>
+                        <td className="p-4 text-sm max-w-xs truncate">{t.items.map(i => `${i.qty}x ${i.name}`).join(', ')}</td>
+                        <td className="p-4">{t.discount > 0 ? `-रू${t.discount}` : '-'}</td>
+                        <td className="p-4 font-bold">रू {t.total}</td>
+                        <td className="p-4">{t.paymentMethod.toUpperCase()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -1163,13 +1257,13 @@ export default function Admin() {
         {/* Staff */}
         {tab === 'staff' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Staff Management</h2>
-              <Button onClick={() => setStaffModal({ open: true, editing: null })} className="gradient-primary">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold">Staff Management</h2>
+              <Button onClick={() => setStaffModal({ open: true, editing: null })} className="gradient-primary w-full sm:w-auto">
                 <Plus className="w-4 h-4 mr-2" /> Add Staff
               </Button>
             </div>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {staff.map(s => (
                 <div key={s.id} className="bg-card rounded-xl border border-border p-4">
                   <div className="flex justify-between items-start mb-3">
@@ -1185,7 +1279,7 @@ export default function Admin() {
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">Created: {formatNepalDateReadable(s.createdAt)}</p>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => setStaffModal({ open: true, editing: s })}>
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => setStaffModal({ open: true, editing: s })}>
                       <Edit className="w-3 h-3 mr-1" /> Edit
                     </Button>
                     <Button size="sm" variant="destructive" onClick={() => handleDeleteStaff(s.id)}>
@@ -1201,26 +1295,27 @@ export default function Admin() {
         {/* QR */}
         {tab === 'qr' && (
           <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Tables & QR Codes</h2>
-              <Button onClick={printAllQR} className="gradient-primary">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold">Tables & QR Codes</h2>
+              <Button onClick={printAllQR} className="gradient-primary w-full sm:w-auto">
                 <Download className="w-4 h-4 mr-2" /> Print All QR
               </Button>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4" ref={qrRef}>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-4" ref={qrRef}>
               {Array.from({ length: settings.tableCount }, (_, i) => i + 1).map(num => (
-                <div key={num} className="bg-card rounded-xl border border-border p-4 text-center">
-                  <p className="font-bold text-lg mb-2">Table {num}</p>
-                  <div className="bg-white p-2 rounded-lg inline-block mb-2">
+                <div key={num} className="bg-card rounded-xl border border-border p-3 md:p-4 text-center">
+                  <p className="font-bold text-base md:text-lg mb-2">Table {num}</p>
+                  <div className="bg-white p-1 md:p-2 rounded-lg inline-block mb-2">
                     <QRCodeSVG
                       id={`qr-${num}`}
                       value={`${settings.baseUrl || window.location.origin}/table/${num}`}
-                      size={120}
+                      size={80}
                       level="M"
+                      className="md:w-[120px] md:h-[120px]"
                     />
                   </div>
-                  <p className="text-xs text-muted-foreground mb-2">{settings.restaurantName}</p>
-                  <Button size="sm" variant="outline" onClick={() => downloadQR(num)}>
+                  <p className="text-xs text-muted-foreground mb-2 truncate">{settings.restaurantName}</p>
+                  <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => downloadQR(num)}>
                     <Download className="w-3 h-3 mr-1" /> Download
                   </Button>
                 </div>
