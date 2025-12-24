@@ -1,7 +1,21 @@
 // API Client for SQLite Backend
-// Configure this to point to your backend server
+// Auto-detects local IP from current browser location
 
-const API_BASE_URL = localStorage.getItem('api_base_url') || 'http://localhost:3001';
+const BACKEND_PORT = 3001;
+
+// Auto-detect the API base URL from current window location
+const getAutoDetectedUrl = (): string => {
+  if (typeof window === 'undefined') return 'http://localhost:3001';
+  
+  const { hostname } = window.location;
+  
+  // If accessing via IP address or hostname (not localhost), use the same host for backend
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:${BACKEND_PORT}`;
+  }
+  
+  return `http://localhost:${BACKEND_PORT}`;
+};
 
 export const setApiBaseUrl = (url: string) => {
   localStorage.setItem('api_base_url', url);
@@ -9,7 +23,11 @@ export const setApiBaseUrl = (url: string) => {
 };
 
 export const getApiBaseUrl = () => {
-  return localStorage.getItem('api_base_url') || 'http://localhost:3001';
+  // If user has manually set a URL, use that; otherwise auto-detect
+  const manualUrl = localStorage.getItem('api_base_url');
+  if (manualUrl) return manualUrl;
+  
+  return getAutoDetectedUrl();
 };
 
 // Generic fetch wrapper with error handling
