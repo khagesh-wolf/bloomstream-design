@@ -7,14 +7,24 @@ const BACKEND_PORT = 3001;
 const getAutoDetectedUrl = (): string => {
   if (typeof window === 'undefined') return 'http://localhost:3001';
   
-  const { hostname } = window.location;
+  const { hostname, protocol } = window.location;
   
-  // If accessing via IP address or hostname (not localhost), use the same host for backend
-  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+  // For local development, always use HTTP since backend doesn't support HTTPS
+  // mDNS (.local) and local IPs should always use HTTP
+  const isLocalNetwork = hostname === 'localhost' || 
+                         hostname === '127.0.0.1' || 
+                         hostname.endsWith('.local') ||
+                         /^192\.168\.\d+\.\d+$/.test(hostname) ||
+                         /^10\.\d+\.\d+\.\d+$/.test(hostname) ||
+                         /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(hostname);
+  
+  // Always use HTTP for local network (backend doesn't have HTTPS)
+  if (isLocalNetwork) {
     return `http://${hostname}:${BACKEND_PORT}`;
   }
   
-  return `http://localhost:${BACKEND_PORT}`;
+  // For external/production, use same protocol as the page
+  return `${protocol}//${hostname}:${BACKEND_PORT}`;
 };
 
 export const setApiBaseUrl = (url: string) => {
