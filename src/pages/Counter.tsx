@@ -10,7 +10,6 @@ import {
   Check,
   X,
   Search,
-  LogOut,
   Printer,
   RefreshCw,
   Wallet,
@@ -23,6 +22,7 @@ import { formatNepalTime, formatNepalDateTime } from '@/lib/nepalTime';
 import FonepayQR from '@/components/FonepayQR';
 import { useOrderNotification } from '@/hooks/useOrderNotification';
 import { useWaiterCallNotification } from '@/hooks/useWaiterCallNotification';
+import { MainLayout } from '@/components/layout/MainLayout';
 
 interface BillGroup {
   key: string;
@@ -61,7 +61,6 @@ export default function Counter() {
     getPendingWaiterCalls,
     isAuthenticated,
     currentUser,
-    logout,
     settings,
     getCustomerPoints
   } = useStore();
@@ -359,12 +358,9 @@ export default function Counter() {
     setDetailModalOpen(true);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/auth');
-  };
 
   return (
+    <MainLayout showHeader={false}>
     <div className="flex h-screen bg-[#f0f2f5] overflow-hidden">
       {/* Sidebar - Incoming Orders & Waiter Calls - 3D Enhanced */}
       <div className="w-[350px] text-white flex flex-col relative overflow-hidden"
@@ -576,9 +572,6 @@ export default function Counter() {
             />
             <Button variant="outline" onClick={() => window.location.reload()}>
               <RefreshCw className="w-4 h-4" />
-            </Button>
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" /> Logout
             </Button>
           </div>
         </div>
@@ -983,5 +976,6 @@ export default function Counter() {
         </DialogContent>
       </Dialog>
     </div>
+    </MainLayout>
   );
 }
