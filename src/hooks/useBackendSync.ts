@@ -62,18 +62,43 @@ export const useBackendSync = () => {
         transactionsApi.getAll(),
       ]);
 
-      // Update store with backend data
-      useStore.setState({
-        menuItems: menuItems || [],
-        orders: orders || [],
-        bills: bills || [],
-        customers: customers || [],
-        staff: staff || [],
-        settings: settings || store.settings,
-        expenses: expenses || [],
-        waiterCalls: waiterCalls || [],
-        transactions: transactions || [],
-      });
+      // If backend has no menu items but local store does, push local menu to backend
+      // This ensures the first device to connect seeds the database
+      const localMenuItems = store.menuItems;
+      if ((!menuItems || menuItems.length === 0) && localMenuItems.length > 0) {
+        console.log('[BackendSync] Backend has no menu items, pushing local menu to backend...');
+        for (const item of localMenuItems) {
+          try {
+            await menuApi.create(item);
+          } catch (err) {
+            console.error('[BackendSync] Failed to push menu item:', item.name, err);
+          }
+        }
+        // Keep local menu items since we just pushed them
+        useStore.setState({
+          orders: orders || [],
+          bills: bills || [],
+          customers: customers || [],
+          staff: staff.length > 0 ? staff : store.staff,
+          settings: settings || store.settings,
+          expenses: expenses || [],
+          waiterCalls: waiterCalls || [],
+          transactions: transactions || [],
+        });
+      } else {
+        // Update store with backend data
+        useStore.setState({
+          menuItems: menuItems || [],
+          orders: orders || [],
+          bills: bills || [],
+          customers: customers || [],
+          staff: staff.length > 0 ? staff : store.staff,
+          settings: settings || store.settings,
+          expenses: expenses || [],
+          waiterCalls: waiterCalls || [],
+          transactions: transactions || [],
+        });
+      }
 
       setIsConnected(true);
       markSynced();
@@ -85,7 +110,7 @@ export const useBackendSync = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [store.settings, markSynced]);
+  }, [store.settings, store.menuItems, store.staff, markSynced]);
 
   // Switch between local and backend mode
   const switchMode = useCallback(async (newMode: BackendMode) => {
@@ -156,11 +181,29 @@ export const useBackendSync = () => {
       })
     );
 
-    // Waiter call updates
+    // Waiter call updates (server broadcasts 'WAITER_CALL')
     unsubscribers.push(
-      wsSync.on('WAITER_CALL_UPDATE', async () => {
+      wsSync.on('WAITER_CALL', async () => {
         const waiterCalls = await waiterCallsApi.getAll();
         useStore.setState({ waiterCalls });
+        markSynced();
+      })
+    );
+
+    // Settings updates
+    unsubscribers.push(
+      wsSync.on('SETTINGS_UPDATE', async () => {
+        const settings = await settingsApi.get();
+        useStore.setState({ settings });
+        markSynced();
+      })
+    );
+
+    // Expense updates
+    unsubscribers.push(
+      wsSync.on('EXPENSE_UPDATE', async () => {
+        const expenses = await expensesApi.getAll();
+        useStore.setState({ expenses });
         markSynced();
       })
     );
