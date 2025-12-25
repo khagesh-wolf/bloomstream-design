@@ -1,286 +1,145 @@
 -- ===========================================
--- Chiyadani POS Complete Database Schema
+-- Chiyadani POS - Complete Database Schema
+-- Optimized for high-volume restaurant operations
 -- Run this in Supabase SQL Editor
+-- ===========================================
+
+-- Enable necessary extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ===========================================
+-- TABLES
 -- ===========================================
 
 -- Categories table
 CREATE TABLE IF NOT EXISTS categories (
-  id SERIAL PRIMARY KEY,
+  id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  icon TEXT,
   sort_order INTEGER DEFAULT 0,
+  prep_time INTEGER DEFAULT 5,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Menu items table
 CREATE TABLE IF NOT EXISTS menu_items (
-  id SERIAL PRIMARY KEY,
+  id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   price DECIMAL(10,2) NOT NULL,
-  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-  description TEXT,
-  image_url TEXT,
-  is_available BOOLEAN DEFAULT true,
-  is_vegetarian BOOLEAN DEFAULT false,
-  is_spicy BOOLEAN DEFAULT false,
-  preparation_time INTEGER DEFAULT 10,
+  category TEXT NOT NULL,
+  available BOOLEAN DEFAULT true,
+  description TEXT DEFAULT '',
+  image TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Orders table
 CREATE TABLE IF NOT EXISTS orders (
-  id SERIAL PRIMARY KEY,
-  table_number TEXT,
+  id TEXT PRIMARY KEY,
+  table_number INTEGER NOT NULL,
+  customer_phone TEXT DEFAULT '',
   items JSONB NOT NULL DEFAULT '[]',
   status TEXT DEFAULT 'pending',
   total DECIMAL(10,2) NOT NULL DEFAULT 0,
-  notes TEXT,
-  customer_phone TEXT,
+  notes TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  completed_at TIMESTAMPTZ
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Bills table
 CREATE TABLE IF NOT EXISTS bills (
-  id SERIAL PRIMARY KEY,
-  order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
-  table_number TEXT,
-  items JSONB NOT NULL DEFAULT '[]',
+  id TEXT PRIMARY KEY,
+  table_number INTEGER NOT NULL,
+  orders JSONB NOT NULL DEFAULT '[]',
+  customer_phones JSONB NOT NULL DEFAULT '[]',
   subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
-  tax DECIMAL(10,2) DEFAULT 0,
   discount DECIMAL(10,2) DEFAULT 0,
   total DECIMAL(10,2) NOT NULL DEFAULT 0,
+  status TEXT DEFAULT 'unpaid',
   payment_method TEXT,
-  status TEXT DEFAULT 'pending',
   paid_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Staff table
-CREATE TABLE IF NOT EXISTS staff (
-  id SERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  role TEXT DEFAULT 'waiter',
-  phone TEXT,
-  pin TEXT,
-  is_active BOOLEAN DEFAULT true,
+-- Transactions table (completed sales)
+CREATE TABLE IF NOT EXISTS transactions (
+  id TEXT PRIMARY KEY,
+  bill_id TEXT,
+  table_number INTEGER NOT NULL,
+  customer_phones JSONB DEFAULT '[]',
+  total DECIMAL(10,2) NOT NULL,
+  discount DECIMAL(10,2) DEFAULT 0,
+  payment_method TEXT NOT NULL,
+  paid_at TIMESTAMPTZ NOT NULL,
+  items JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Customers table
 CREATE TABLE IF NOT EXISTS customers (
-  id SERIAL PRIMARY KEY,
-  name TEXT,
-  phone TEXT UNIQUE NOT NULL,
-  email TEXT,
-  visits INTEGER DEFAULT 1,
+  phone TEXT PRIMARY KEY,
+  name TEXT DEFAULT '',
+  total_orders INTEGER DEFAULT 0,
   total_spent DECIMAL(10,2) DEFAULT 0,
-  loyalty_points INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  last_visit TIMESTAMPTZ DEFAULT NOW()
+  points INTEGER DEFAULT 0,
+  last_visit TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Settings table (single row for app settings)
+-- Staff table
+CREATE TABLE IF NOT EXISTS staff (
+  id TEXT PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT DEFAULT 'counter',
+  name TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Settings table (single row for app configuration)
 CREATE TABLE IF NOT EXISTS settings (
   id SERIAL PRIMARY KEY,
   restaurant_name TEXT DEFAULT 'Chiyadani',
-  currency TEXT DEFAULT 'NPR',
-  tax_rate DECIMAL(5,2) DEFAULT 13.00,
-  service_charge DECIMAL(5,2) DEFAULT 0,
-  tables_count INTEGER DEFAULT 10,
-  opening_time TEXT DEFAULT '08:00',
-  closing_time TEXT DEFAULT '22:00',
-  fonepay_merchant_id TEXT,
-  fonepay_secret_key TEXT,
-  printer_ip TEXT,
+  table_count INTEGER DEFAULT 10,
+  wifi_ssid TEXT DEFAULT '',
+  wifi_password TEXT DEFAULT '',
+  base_url TEXT DEFAULT '',
+  logo TEXT DEFAULT '',
+  instagram_url TEXT DEFAULT '',
+  facebook_url TEXT DEFAULT '',
+  tiktok_url TEXT DEFAULT '',
+  google_review_url TEXT DEFAULT '',
+  counter_as_admin BOOLEAN DEFAULT false,
+  kitchen_handles INTEGER DEFAULT 3,
+  point_system_enabled BOOLEAN DEFAULT false,
+  points_per_rupee DECIMAL DEFAULT 0.1,
+  point_value_in_rupees DECIMAL DEFAULT 1,
+  max_discount_rupees DECIMAL DEFAULT 500,
+  max_discount_points INTEGER DEFAULT 500,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Expenses table
 CREATE TABLE IF NOT EXISTS expenses (
-  id SERIAL PRIMARY KEY,
-  category TEXT NOT NULL,
-  description TEXT,
+  id TEXT PRIMARY KEY,
   amount DECIMAL(10,2) NOT NULL,
-  date DATE DEFAULT CURRENT_DATE,
+  description TEXT DEFAULT '',
+  category TEXT NOT NULL,
+  created_by TEXT DEFAULT '',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Waiter calls table
 CREATE TABLE IF NOT EXISTS waiter_calls (
-  id SERIAL PRIMARY KEY,
-  table_number TEXT NOT NULL,
-  call_type TEXT DEFAULT 'assistance',
+  id TEXT PRIMARY KEY,
+  table_number INTEGER NOT NULL,
+  customer_phone TEXT DEFAULT '',
   status TEXT DEFAULT 'pending',
   acknowledged_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Transactions table (for detailed financial tracking)
-CREATE TABLE IF NOT EXISTS transactions (
-  id SERIAL PRIMARY KEY,
-  type TEXT NOT NULL, -- 'sale', 'refund', 'expense'
-  reference_id INTEGER, -- order_id or expense_id
-  amount DECIMAL(10,2) NOT NULL,
-  payment_method TEXT,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ===========================================
--- Enable Row Level Security
--- ===========================================
-
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
-ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-ALTER TABLE waiter_calls ENABLE ROW LEVEL SECURITY;
-ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-
--- ===========================================
--- RLS Policies - Public Read Access
--- (For POS systems, data needs to be accessible)
--- ===========================================
-
--- Drop existing policies first to avoid conflicts
-DROP POLICY IF EXISTS "Public read categories" ON categories;
-DROP POLICY IF EXISTS "Public insert categories" ON categories;
-DROP POLICY IF EXISTS "Public update categories" ON categories;
-DROP POLICY IF EXISTS "Public delete categories" ON categories;
-
-DROP POLICY IF EXISTS "Public read menu_items" ON menu_items;
-DROP POLICY IF EXISTS "Public insert menu_items" ON menu_items;
-DROP POLICY IF EXISTS "Public update menu_items" ON menu_items;
-DROP POLICY IF EXISTS "Public delete menu_items" ON menu_items;
-
-DROP POLICY IF EXISTS "Public read orders" ON orders;
-DROP POLICY IF EXISTS "Public insert orders" ON orders;
-DROP POLICY IF EXISTS "Public update orders" ON orders;
-DROP POLICY IF EXISTS "Public delete orders" ON orders;
-
-DROP POLICY IF EXISTS "Public read bills" ON bills;
-DROP POLICY IF EXISTS "Public insert bills" ON bills;
-DROP POLICY IF EXISTS "Public update bills" ON bills;
-DROP POLICY IF EXISTS "Public delete bills" ON bills;
-
-DROP POLICY IF EXISTS "Public read staff" ON staff;
-DROP POLICY IF EXISTS "Public insert staff" ON staff;
-DROP POLICY IF EXISTS "Public update staff" ON staff;
-DROP POLICY IF EXISTS "Public delete staff" ON staff;
-
-DROP POLICY IF EXISTS "Public read customers" ON customers;
-DROP POLICY IF EXISTS "Public insert customers" ON customers;
-DROP POLICY IF EXISTS "Public update customers" ON customers;
-DROP POLICY IF EXISTS "Public delete customers" ON customers;
-
-DROP POLICY IF EXISTS "Public read settings" ON settings;
-DROP POLICY IF EXISTS "Public insert settings" ON settings;
-DROP POLICY IF EXISTS "Public update settings" ON settings;
-
-DROP POLICY IF EXISTS "Public read expenses" ON expenses;
-DROP POLICY IF EXISTS "Public insert expenses" ON expenses;
-DROP POLICY IF EXISTS "Public delete expenses" ON expenses;
-
-DROP POLICY IF EXISTS "Public read waiter_calls" ON waiter_calls;
-DROP POLICY IF EXISTS "Public insert waiter_calls" ON waiter_calls;
-DROP POLICY IF EXISTS "Public update waiter_calls" ON waiter_calls;
-DROP POLICY IF EXISTS "Public delete waiter_calls" ON waiter_calls;
-
-DROP POLICY IF EXISTS "Public read transactions" ON transactions;
-DROP POLICY IF EXISTS "Public insert transactions" ON transactions;
-
-DROP POLICY IF EXISTS "Public read payment_blocks" ON payment_blocks;
-DROP POLICY IF EXISTS "Public insert payment_blocks" ON payment_blocks;
-DROP POLICY IF EXISTS "Public update payment_blocks" ON payment_blocks;
-
--- Categories: Public read, authenticated write
-CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
-CREATE POLICY "Public insert categories" ON categories FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update categories" ON categories FOR UPDATE USING (true);
-CREATE POLICY "Public delete categories" ON categories FOR DELETE USING (true);
-
--- Menu Items: Public read, authenticated write
-CREATE POLICY "Public read menu_items" ON menu_items FOR SELECT USING (true);
-CREATE POLICY "Public insert menu_items" ON menu_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update menu_items" ON menu_items FOR UPDATE USING (true);
-CREATE POLICY "Public delete menu_items" ON menu_items FOR DELETE USING (true);
-
--- Orders: Public access for POS functionality
-CREATE POLICY "Public read orders" ON orders FOR SELECT USING (true);
-CREATE POLICY "Public insert orders" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update orders" ON orders FOR UPDATE USING (true);
-CREATE POLICY "Public delete orders" ON orders FOR DELETE USING (true);
-
--- Bills: Public access
-CREATE POLICY "Public read bills" ON bills FOR SELECT USING (true);
-CREATE POLICY "Public insert bills" ON bills FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update bills" ON bills FOR UPDATE USING (true);
-CREATE POLICY "Public delete bills" ON bills FOR DELETE USING (true);
-
--- Staff: Public access (in production, restrict to authenticated)
-CREATE POLICY "Public read staff" ON staff FOR SELECT USING (true);
-CREATE POLICY "Public insert staff" ON staff FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update staff" ON staff FOR UPDATE USING (true);
-CREATE POLICY "Public delete staff" ON staff FOR DELETE USING (true);
-
--- Customers: Public access
-CREATE POLICY "Public read customers" ON customers FOR SELECT USING (true);
-CREATE POLICY "Public insert customers" ON customers FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update customers" ON customers FOR UPDATE USING (true);
-CREATE POLICY "Public delete customers" ON customers FOR DELETE USING (true);
-
--- Settings: Public access
-CREATE POLICY "Public read settings" ON settings FOR SELECT USING (true);
-CREATE POLICY "Public insert settings" ON settings FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update settings" ON settings FOR UPDATE USING (true);
-
--- Expenses: Public access
-CREATE POLICY "Public read expenses" ON expenses FOR SELECT USING (true);
-CREATE POLICY "Public insert expenses" ON expenses FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public delete expenses" ON expenses FOR DELETE USING (true);
-
--- Waiter Calls: Public access
-CREATE POLICY "Public read waiter_calls" ON waiter_calls FOR SELECT USING (true);
-CREATE POLICY "Public insert waiter_calls" ON waiter_calls FOR INSERT WITH CHECK (true);
-CREATE POLICY "Public update waiter_calls" ON waiter_calls FOR UPDATE USING (true);
-CREATE POLICY "Public delete waiter_calls" ON waiter_calls FOR DELETE USING (true);
-
--- Transactions: Public access
-CREATE POLICY "Public read transactions" ON transactions FOR SELECT USING (true);
-CREATE POLICY "Public insert transactions" ON transactions FOR INSERT WITH CHECK (true);
-
--- ===========================================
--- Enable Realtime for live updates
--- ===========================================
-
-ALTER PUBLICATION supabase_realtime ADD TABLE orders;
-ALTER PUBLICATION supabase_realtime ADD TABLE waiter_calls;
-ALTER PUBLICATION supabase_realtime ADD TABLE bills;
-
--- ===========================================
--- Indexes for performance
--- ===========================================
-
-CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
-CREATE INDEX IF NOT EXISTS idx_orders_table ON orders(table_number);
-CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(category_id);
-CREATE INDEX IF NOT EXISTS idx_menu_items_available ON menu_items(is_available);
-CREATE INDEX IF NOT EXISTS idx_bills_status ON bills(status);
-CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
-CREATE INDEX IF NOT EXISTS idx_waiter_calls_status ON waiter_calls(status);
-CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at DESC);
-
--- ===========================================
 -- Payment blocks table (3-hour cooldown after payment)
--- ===========================================
-
 CREATE TABLE IF NOT EXISTS payment_blocks (
   id SERIAL PRIMARY KEY,
   table_number INTEGER NOT NULL,
@@ -291,11 +150,154 @@ CREATE TABLE IF NOT EXISTS payment_blocks (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_payment_blocks_table_phone ON payment_blocks(table_number, customer_phone);
-CREATE INDEX IF NOT EXISTS idx_payment_blocks_paid_at ON payment_blocks(paid_at DESC);
+-- ===========================================
+-- INDEXES for Performance
+-- ===========================================
 
+CREATE INDEX IF NOT EXISTS idx_categories_sort ON categories(sort_order);
+CREATE INDEX IF NOT EXISTS idx_menu_items_category ON menu_items(category);
+CREATE INDEX IF NOT EXISTS idx_menu_items_available ON menu_items(available);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_table ON orders(table_number);
+CREATE INDEX IF NOT EXISTS idx_orders_phone ON orders(customer_phone);
+CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_bills_status ON bills(status);
+CREATE INDEX IF NOT EXISTS idx_bills_table ON bills(table_number);
+CREATE INDEX IF NOT EXISTS idx_bills_paid ON bills(paid_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_paid ON transactions(paid_at DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_table ON transactions(table_number);
+CREATE INDEX IF NOT EXISTS idx_customers_phone ON customers(phone);
+CREATE INDEX IF NOT EXISTS idx_customers_last_visit ON customers(last_visit DESC);
+CREATE INDEX IF NOT EXISTS idx_staff_username ON staff(username);
+CREATE INDEX IF NOT EXISTS idx_expenses_created ON expenses(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+CREATE INDEX IF NOT EXISTS idx_waiter_calls_status ON waiter_calls(status);
+CREATE INDEX IF NOT EXISTS idx_waiter_calls_table ON waiter_calls(table_number);
+CREATE INDEX IF NOT EXISTS idx_payment_blocks_lookup ON payment_blocks(table_number, customer_phone, paid_at DESC);
+
+-- ===========================================
+-- ROW LEVEL SECURITY
+-- ===========================================
+
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE customers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff ENABLE ROW LEVEL SECURITY;
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE waiter_calls ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_blocks ENABLE ROW LEVEL SECURITY;
 
+-- ===========================================
+-- RLS POLICIES (Drop existing, then create)
+-- ===========================================
+
+-- Categories
+DROP POLICY IF EXISTS "Public read categories" ON categories;
+DROP POLICY IF EXISTS "Public insert categories" ON categories;
+DROP POLICY IF EXISTS "Public update categories" ON categories;
+DROP POLICY IF EXISTS "Public delete categories" ON categories;
+
+CREATE POLICY "Public read categories" ON categories FOR SELECT USING (true);
+CREATE POLICY "Public insert categories" ON categories FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update categories" ON categories FOR UPDATE USING (true);
+CREATE POLICY "Public delete categories" ON categories FOR DELETE USING (true);
+
+-- Menu Items
+DROP POLICY IF EXISTS "Public read menu_items" ON menu_items;
+DROP POLICY IF EXISTS "Public insert menu_items" ON menu_items;
+DROP POLICY IF EXISTS "Public update menu_items" ON menu_items;
+DROP POLICY IF EXISTS "Public delete menu_items" ON menu_items;
+
+CREATE POLICY "Public read menu_items" ON menu_items FOR SELECT USING (true);
+CREATE POLICY "Public insert menu_items" ON menu_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update menu_items" ON menu_items FOR UPDATE USING (true);
+CREATE POLICY "Public delete menu_items" ON menu_items FOR DELETE USING (true);
+
+-- Orders
+DROP POLICY IF EXISTS "Public read orders" ON orders;
+DROP POLICY IF EXISTS "Public insert orders" ON orders;
+DROP POLICY IF EXISTS "Public update orders" ON orders;
+DROP POLICY IF EXISTS "Public delete orders" ON orders;
+
+CREATE POLICY "Public read orders" ON orders FOR SELECT USING (true);
+CREATE POLICY "Public insert orders" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update orders" ON orders FOR UPDATE USING (true);
+CREATE POLICY "Public delete orders" ON orders FOR DELETE USING (true);
+
+-- Bills
+DROP POLICY IF EXISTS "Public read bills" ON bills;
+DROP POLICY IF EXISTS "Public insert bills" ON bills;
+DROP POLICY IF EXISTS "Public update bills" ON bills;
+DROP POLICY IF EXISTS "Public delete bills" ON bills;
+
+CREATE POLICY "Public read bills" ON bills FOR SELECT USING (true);
+CREATE POLICY "Public insert bills" ON bills FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update bills" ON bills FOR UPDATE USING (true);
+CREATE POLICY "Public delete bills" ON bills FOR DELETE USING (true);
+
+-- Transactions
+DROP POLICY IF EXISTS "Public read transactions" ON transactions;
+DROP POLICY IF EXISTS "Public insert transactions" ON transactions;
+
+CREATE POLICY "Public read transactions" ON transactions FOR SELECT USING (true);
+CREATE POLICY "Public insert transactions" ON transactions FOR INSERT WITH CHECK (true);
+
+-- Customers
+DROP POLICY IF EXISTS "Public read customers" ON customers;
+DROP POLICY IF EXISTS "Public insert customers" ON customers;
+DROP POLICY IF EXISTS "Public update customers" ON customers;
+DROP POLICY IF EXISTS "Public delete customers" ON customers;
+
+CREATE POLICY "Public read customers" ON customers FOR SELECT USING (true);
+CREATE POLICY "Public insert customers" ON customers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update customers" ON customers FOR UPDATE USING (true);
+CREATE POLICY "Public delete customers" ON customers FOR DELETE USING (true);
+
+-- Staff
+DROP POLICY IF EXISTS "Public read staff" ON staff;
+DROP POLICY IF EXISTS "Public insert staff" ON staff;
+DROP POLICY IF EXISTS "Public update staff" ON staff;
+DROP POLICY IF EXISTS "Public delete staff" ON staff;
+
+CREATE POLICY "Public read staff" ON staff FOR SELECT USING (true);
+CREATE POLICY "Public insert staff" ON staff FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update staff" ON staff FOR UPDATE USING (true);
+CREATE POLICY "Public delete staff" ON staff FOR DELETE USING (true);
+
+-- Settings
+DROP POLICY IF EXISTS "Public read settings" ON settings;
+DROP POLICY IF EXISTS "Public insert settings" ON settings;
+DROP POLICY IF EXISTS "Public update settings" ON settings;
+
+CREATE POLICY "Public read settings" ON settings FOR SELECT USING (true);
+CREATE POLICY "Public insert settings" ON settings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update settings" ON settings FOR UPDATE USING (true);
+
+-- Expenses
+DROP POLICY IF EXISTS "Public read expenses" ON expenses;
+DROP POLICY IF EXISTS "Public insert expenses" ON expenses;
+DROP POLICY IF EXISTS "Public delete expenses" ON expenses;
+
+CREATE POLICY "Public read expenses" ON expenses FOR SELECT USING (true);
+CREATE POLICY "Public insert expenses" ON expenses FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public delete expenses" ON expenses FOR DELETE USING (true);
+
+-- Waiter Calls
+DROP POLICY IF EXISTS "Public read waiter_calls" ON waiter_calls;
+DROP POLICY IF EXISTS "Public insert waiter_calls" ON waiter_calls;
+DROP POLICY IF EXISTS "Public update waiter_calls" ON waiter_calls;
+DROP POLICY IF EXISTS "Public delete waiter_calls" ON waiter_calls;
+
+CREATE POLICY "Public read waiter_calls" ON waiter_calls FOR SELECT USING (true);
+CREATE POLICY "Public insert waiter_calls" ON waiter_calls FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update waiter_calls" ON waiter_calls FOR UPDATE USING (true);
+CREATE POLICY "Public delete waiter_calls" ON waiter_calls FOR DELETE USING (true);
+
+-- Payment Blocks
 DROP POLICY IF EXISTS "Public read payment_blocks" ON payment_blocks;
 DROP POLICY IF EXISTS "Public insert payment_blocks" ON payment_blocks;
 DROP POLICY IF EXISTS "Public update payment_blocks" ON payment_blocks;
@@ -303,6 +305,39 @@ DROP POLICY IF EXISTS "Public update payment_blocks" ON payment_blocks;
 CREATE POLICY "Public read payment_blocks" ON payment_blocks FOR SELECT USING (true);
 CREATE POLICY "Public insert payment_blocks" ON payment_blocks FOR INSERT WITH CHECK (true);
 CREATE POLICY "Public update payment_blocks" ON payment_blocks FOR UPDATE USING (true);
+
+-- ===========================================
+-- REALTIME SUBSCRIPTIONS
+-- ===========================================
+
+DO $$
+BEGIN
+  -- Check and add tables to realtime publication
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'orders'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE orders;
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'waiter_calls'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE waiter_calls;
+  END IF;
+  
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables 
+    WHERE pubname = 'supabase_realtime' AND tablename = 'bills'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE bills;
+  END IF;
+END $$;
+
+-- ===========================================
+-- HELPER FUNCTIONS
+-- ===========================================
 
 -- Function to check if customer is blocked (paid within 3 hours)
 CREATE OR REPLACE FUNCTION check_payment_block(
@@ -355,30 +390,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ===========================================
--- Settings table extensions for app fields
--- ===========================================
-
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS base_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS wifi_ssid TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS wifi_password TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS counter_as_admin BOOLEAN DEFAULT FALSE;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS logo_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS instagram_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS facebook_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS tiktok_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS google_review_url TEXT;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS kitchen_handles INTEGER DEFAULT 3;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS point_system_enabled BOOLEAN DEFAULT FALSE;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS points_per_rupee NUMERIC;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS point_value_in_rupees NUMERIC;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS max_discount_rupees NUMERIC;
-ALTER TABLE settings ADD COLUMN IF NOT EXISTS max_discount_points INTEGER;
+-- Function to cleanup old payment blocks (older than 24 hours)
+CREATE OR REPLACE FUNCTION cleanup_old_payment_blocks()
+RETURNS INTEGER AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  DELETE FROM payment_blocks WHERE paid_at < NOW() - INTERVAL '24 hours';
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ===========================================
--- Insert default settings row
+-- DEFAULT DATA
 -- ===========================================
 
-INSERT INTO settings (restaurant_name, currency, tax_rate)
-VALUES ('Chiyadani', 'NPR', 13.00)
+-- Insert default settings if not exists
+INSERT INTO settings (restaurant_name, table_count)
+VALUES ('Chiyadani', 10)
 ON CONFLICT DO NOTHING;
