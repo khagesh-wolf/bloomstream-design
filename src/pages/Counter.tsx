@@ -965,7 +965,7 @@ export default function Counter() {
               <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => window.location.reload()}>
                 <RefreshCw className="w-3.5 h-3.5" />
               </Button>
-              {settings.counterAsAdmin && (
+              {(settings.counterAsAdmin || currentUser?.role === 'admin') && (
                 <Button variant="outline" size="icon" className="h-8 w-8 bg-primary/10 border-primary text-primary hover:bg-primary/20" onClick={() => navigate('/admin')}>
                   <Settings className="w-3.5 h-3.5" />
                 </Button>
