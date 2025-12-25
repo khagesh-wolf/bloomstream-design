@@ -1,19 +1,23 @@
 import { useEffect, useState } from 'react';
 import { LiveIndicator } from '@/components/ui/LiveIndicator';
 import { cn } from '@/lib/utils';
-import { wsSync } from '@/lib/websocketSync';
+import { checkBackendHealth } from '@/lib/apiClient';
 
 interface SyncStatusProps {
   className?: string;
 }
 
 export function SyncStatus({ className }: SyncStatusProps) {
-  const [isConnected, setIsConnected] = useState<boolean>(wsSync.isConnected());
+  const [isConnected, setIsConnected] = useState<boolean>(true);
 
   useEffect(() => {
+    // Check connection on mount
+    checkBackendHealth().then(setIsConnected);
+
+    // Periodically check connection
     const id = window.setInterval(() => {
-      setIsConnected(wsSync.isConnected());
-    }, 1000);
+      checkBackendHealth().then(setIsConnected);
+    }, 30000); // Check every 30 seconds
 
     return () => window.clearInterval(id);
   }, []);
@@ -26,7 +30,7 @@ export function SyncStatus({ className }: SyncStatusProps) {
       <LiveIndicator color={color} />
       <div className="leading-tight">
         <div className="text-xs font-medium text-foreground">{label}</div>
-        <div className="text-[11px] text-muted-foreground">Database</div>
+        <div className="text-[11px] text-muted-foreground">Cloud</div>
       </div>
     </div>
   );
