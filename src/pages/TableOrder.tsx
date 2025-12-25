@@ -125,6 +125,44 @@ export default function TableOrder() {
     }
   }, [navigate, table]);
 
+  // Auto-logout after 4 hours - check session validity
+  useEffect(() => {
+    if (!isPWA()) return;
+    
+    const checkSessionExpiry = () => {
+      const sessionKey = 'chiyadani:customerActiveSession';
+      const existingSession = localStorage.getItem(sessionKey);
+      
+      if (existingSession) {
+        try {
+          const session = JSON.parse(existingSession);
+          const tableTimestamp = session.tableTimestamp || session.timestamp;
+          const tableAge = Date.now() - tableTimestamp;
+          const isTableExpired = tableAge > 4 * 60 * 60 * 1000; // 4 hours
+          
+          if (isTableExpired) {
+            // Clear session and redirect to scan
+            localStorage.removeItem(sessionKey);
+            toast.info('Session expired. Please scan your table QR again.');
+            navigate('/scan', { replace: true });
+          }
+        } catch {
+          // Invalid session, clear and redirect
+          localStorage.removeItem(sessionKey);
+          navigate('/scan', { replace: true });
+        }
+      }
+    };
+    
+    // Check immediately
+    checkSessionExpiry();
+    
+    // Check every minute
+    const interval = setInterval(checkSessionExpiry, 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [navigate]);
+
   // Validate table number and handle session
   useEffect(() => {
     // Skip if not PWA (will be redirected)

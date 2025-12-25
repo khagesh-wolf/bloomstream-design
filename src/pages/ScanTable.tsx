@@ -1,17 +1,58 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
-import { QrCode, Smartphone } from 'lucide-react';
+import { QrCode, Smartphone, Camera } from 'lucide-react';
 import { isPWA } from './Install';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { QRScanner } from '@/components/QRScanner';
 
 export default function ScanTable() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { settings } = useStore();
+  const [showScanner, setShowScanner] = useState(false);
 
   // Check for table parameter from QR code scan
   const tableFromQR = searchParams.get('table');
+
+  // Handle scan result from in-app scanner
+  const handleScanResult = (tableNum: number) => {
+    setShowScanner(false);
+    if (tableNum >= 1 && tableNum <= settings.tableCount) {
+      // Update session with new table
+      const sessionKey = 'chiyadani:customerActiveSession';
+      const phoneKey = 'chiyadani:customerPhone';
+      const savedPhone = localStorage.getItem(phoneKey);
+      
+      let phone = savedPhone || '';
+      let isPhoneEntered = false;
+      
+      const existingSession = localStorage.getItem(sessionKey);
+      if (existingSession) {
+        try {
+          const session = JSON.parse(existingSession);
+          phone = session.phone || savedPhone || '';
+          isPhoneEntered = Boolean(session.isPhoneEntered);
+        } catch {
+          // Ignore parse errors
+        }
+      }
+      
+      localStorage.setItem(sessionKey, JSON.stringify({
+        table: tableNum,
+        phone,
+        isPhoneEntered,
+        tableTimestamp: Date.now(),
+        timestamp: Date.now()
+      }));
+      
+      toast.success(`Switched to Table ${tableNum}`);
+      navigate(`/table/${tableNum}`, { replace: true });
+    } else {
+      toast.error('Invalid table number');
+    }
+  };
 
   // Handle QR code scan with table number
   useEffect(() => {
@@ -134,12 +175,31 @@ export default function ScanTable() {
         </div>
       </div>
 
+      {/* Scan QR Button for PWA */}
+      {isPWA() && (
+        <Button
+          onClick={() => setShowScanner(true)}
+          className="mt-6 bg-amber-500 hover:bg-amber-600 text-black font-medium"
+        >
+          <Camera className="w-4 h-4 mr-2" />
+          Scan QR Code
+        </Button>
+      )}
+
       {/* PWA status indicator */}
       {isPWA() && (
-        <div className="mt-6 flex items-center gap-2 text-xs text-gray-500">
+        <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
           <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
           <span>App Mode</span>
         </div>
+      )}
+
+      {/* QR Scanner Modal */}
+      {showScanner && (
+        <QRScanner
+          onScan={handleScanResult}
+          onClose={() => setShowScanner(false)}
+        />
       )}
     </div>
   );
