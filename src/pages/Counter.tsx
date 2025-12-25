@@ -29,6 +29,7 @@ import { useWaiterCallNotification } from '@/hooks/useWaiterCallNotification';
 import { useAutoCancel } from '@/hooks/useAutoCancel';
 import { TableMap } from '@/components/ui/TableMap';
 import { CashRegister } from '@/components/CashRegister';
+import { closeTableSession } from '@/lib/sessionManager';
 
 interface BillGroup {
   key: string;
@@ -428,6 +429,10 @@ export default function Counter() {
     const tableNumber = selectedGroups[0]?.tableNumber || 0;
     const bill = createBill(tableNumber, orderIds, discountAmount);
     payBill(bill.id, method);
+
+    // Close customer sessions for all phones that paid
+    // This prevents reuse of old URLs from browser history
+    closeTableSession(tableNumber, selectedPhones);
 
     // Store last paid data for printing
     setLastPaidData({

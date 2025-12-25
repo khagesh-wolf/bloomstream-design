@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useStore } from '@/store/useStore';
 import { OrderItem } from '@/types';
+import { 
+  generateSessionToken, 
+  getClosedSessions, 
+  addClosedSession 
+} from '@/lib/sessionManager';
 import { Input } from '@/components/ui/input';
 import { 
   Plus, 
@@ -45,7 +50,7 @@ import {
 export default function TableOrder() {
   const { tableNumber } = useParams();
   const navigate = useNavigate();
-  const { menuItems, categories, settings, addOrder, getCustomerPoints, updateOrderStatus, callWaiter, waiterCalls } = useStore();
+  const { menuItems, categories, settings, addOrder, getCustomerPoints, updateOrderStatus, callWaiter, waiterCalls, bills } = useStore();
   
   const [phone, setPhone] = useState('');
   const [isPhoneEntered, setIsPhoneEntered] = useState(false);
@@ -119,6 +124,9 @@ export default function TableOrder() {
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [hasShownInstallPrompt, setHasShownInstallPrompt] = useState(false);
+  
+  // State for stale session warning
+  const [showStaleSessionWarning, setShowStaleSessionWarning] = useState(false);
 
   // Capture install prompt event
   useEffect(() => {
@@ -183,6 +191,7 @@ export default function TableOrder() {
     const phoneKey = 'chiyadani:customerPhone';
     const existingSession = localStorage.getItem(sessionKey);
     const savedPhone = localStorage.getItem(phoneKey);
+    const closedSessions = getClosedSessions();
     
     if (existingSession) {
       try {
@@ -191,8 +200,18 @@ export default function TableOrder() {
           phone?: string; 
           tableTimestamp?: number;
           isPhoneEntered?: boolean;
-          timestamp: number 
+          timestamp: number;
+          sessionToken?: string;
         };
+        
+        // Check if this session was closed (bill paid)
+        if (session.sessionToken && closedSessions.includes(session.sessionToken)) {
+          // Session was closed after payment, clear it
+          localStorage.removeItem(sessionKey);
+          toast.info('Your previous session has ended. Please scan the QR code at your table to start a new order.');
+          navigate('/', { replace: true });
+          return;
+        }
         
         // Check if table session is still valid (4 hours)
         const tableTimestamp = session.tableTimestamp || session.timestamp;
@@ -202,13 +221,14 @@ export default function TableOrder() {
         // If table is different and session not expired, update to new table
         // This allows switching tables via QR scan
         if (session.table !== table) {
-          // Update session with new table
+          // Update session with new table and new token
           const updatedSession = {
             table,
             phone: session.phone || savedPhone || '',
             isPhoneEntered: Boolean(session.isPhoneEntered),
             tableTimestamp: Date.now(),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            sessionToken: generateSessionToken()
           };
           localStorage.setItem(sessionKey, JSON.stringify(updatedSession));
           
@@ -220,7 +240,7 @@ export default function TableOrder() {
           // Clear cart when switching tables
           setCart([]);
         } else if (isTableExpired) {
-          // Table expired - keep phone but refresh table timestamp
+          // Table expired - keep phone but refresh table timestamp and token
           if (session.phone || savedPhone) {
             localStorage.setItem(phoneKey, session.phone || savedPhone || '');
           }
@@ -229,7 +249,8 @@ export default function TableOrder() {
             phone: session.phone || savedPhone || '',
             isPhoneEntered: Boolean(session.phone || savedPhone),
             tableTimestamp: Date.now(),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            sessionToken: generateSessionToken()
           }));
           if (session.phone || savedPhone) {
             setPhone(session.phone || savedPhone || '');
@@ -237,6 +258,11 @@ export default function TableOrder() {
           }
         } else {
           // Session still valid, same table
+          // Ensure session has a token (for older sessions without one)
+          if (!session.sessionToken) {
+            const updatedSession = { ...session, sessionToken: generateSessionToken() };
+            localStorage.setItem(sessionKey, JSON.stringify(updatedSession));
+          }
           if (session.phone && session.phone.length >= 10) {
             setPhone(session.phone);
             setIsPhoneEntered(Boolean(session.isPhoneEntered));
@@ -246,13 +272,14 @@ export default function TableOrder() {
         localStorage.removeItem(sessionKey);
       }
     } else if (savedPhone && savedPhone.length >= 10) {
-      // No session but have saved phone - create new session
+      // No session but have saved phone - create new session with token
       localStorage.setItem(sessionKey, JSON.stringify({
         table,
         phone: savedPhone,
         isPhoneEntered: true,
         tableTimestamp: Date.now(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        sessionToken: generateSessionToken()
       }));
       setPhone(savedPhone);
       setIsPhoneEntered(true);
@@ -260,6 +287,48 @@ export default function TableOrder() {
     
     setLockedTable(table);
   }, [table, settings.tableCount, navigate]);
+
+  // Check for stale session (customer returning from browser history after bill was paid)
+  useEffect(() => {
+    if (!isPhoneEntered || !phone || !table) return;
+    
+    const sessionKey = 'chiyadani:customerActiveSession';
+    const existingSession = localStorage.getItem(sessionKey);
+    
+    if (existingSession) {
+      try {
+        const session = JSON.parse(existingSession);
+        
+        // Check if session is more than 30 minutes old
+        const sessionAge = Date.now() - (session.tableTimestamp || session.timestamp);
+        const isSessionOld = sessionAge > 30 * 60 * 1000; // 30 minutes
+        
+        // Check if customer has any active (unpaid) orders at this table
+        const hasActiveOrders = storeOrders.some(
+          o => o.tableNumber === table && 
+               o.customerPhone === phone && 
+               ['pending', 'accepted', 'preparing', 'ready'].includes(o.status) &&
+               !bills.some(b => b.status === 'paid' && b.orders.some(bo => bo.id === o.id))
+        );
+        
+        // Check if customer has paid bills for this table today (indicates they left and came back)
+        const today = new Date().toISOString().slice(0, 10);
+        const hasPaidBillsToday = bills.some(
+          b => b.status === 'paid' && 
+               b.tableNumber === table && 
+               b.customerPhones.includes(phone) &&
+               b.paidAt?.startsWith(today)
+        );
+        
+        // If session is old, no active orders, and has paid bills - they're probably back from history
+        if (isSessionOld && !hasActiveOrders && hasPaidBillsToday) {
+          setShowStaleSessionWarning(true);
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }, [isPhoneEntered, phone, table, storeOrders, bills]);
 
   // Build category list: only show Favorites if there are favorites
   const categoryNames = favorites.length > 0 
@@ -401,12 +470,27 @@ export default function TableOrder() {
       // Save phone permanently (survives table expiry)
       localStorage.setItem(phoneKey, phone);
       
+      // Check for existing session token or generate new one
+      let sessionToken = generateSessionToken();
+      const existingSession = localStorage.getItem(sessionKey);
+      if (existingSession) {
+        try {
+          const session = JSON.parse(existingSession);
+          if (session.sessionToken && !getClosedSessions().includes(session.sessionToken)) {
+            sessionToken = session.sessionToken; // Keep existing valid token
+          }
+        } catch {
+          // Use new token
+        }
+      }
+      
       localStorage.setItem(sessionKey, JSON.stringify({ 
         table: lockedTable, 
         phone, 
         isPhoneEntered: true,
         tableTimestamp: Date.now(),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        sessionToken
       }));
     }
 
@@ -498,6 +582,38 @@ export default function TableOrder() {
       default: return { text: status, color: '#666' };
     }
   };
+
+  // Stale session warning - show when customer returns from browser history after payment
+  if (showStaleSessionWarning) {
+    return (
+      <div className="min-h-screen bg-black/50 flex items-center justify-center p-4">
+        <div className="bg-white w-full max-w-sm rounded-2xl p-8 text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Session Expired</h2>
+          <p className="text-[#666] mb-6">
+            Your previous order has been completed. Please scan the QR code at your table to start a new order.
+          </p>
+          <button
+            onClick={() => {
+              localStorage.removeItem('chiyadani:customerActiveSession');
+              navigate('/', { replace: true });
+            }}
+            className="w-full bg-black text-white p-4 rounded-lg text-lg font-semibold"
+          >
+            Scan QR Code
+          </button>
+          <button
+            onClick={() => setShowStaleSessionWarning(false)}
+            className="w-full mt-3 text-[#666] text-sm underline"
+          >
+            I'm still at this table
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Phone entry screen (Login Modal Style)
   if (!isPhoneEntered) {
