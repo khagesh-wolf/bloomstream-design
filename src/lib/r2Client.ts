@@ -23,7 +23,7 @@ interface UploadOptions {
 }
 
 /**
- * Upload image to Cloudflare R2
+ * Upload image to Cloudflare R2 with WebP conversion
  */
 export async function uploadToR2(
   file: File,
@@ -73,7 +73,6 @@ export async function uploadToR2(
       key: result.key
     };
   } catch (error) {
-    console.error('R2 upload error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Upload failed'
@@ -89,29 +88,8 @@ export async function deleteFromR2(key: string): Promise<boolean> {
     const response = await fetch(`${WORKER_URL}/api/upload?key=${encodeURIComponent(key)}`, {
       method: 'DELETE'
     });
-
     return response.ok;
-  } catch (error) {
-    console.error('R2 delete error:', error);
+  } catch {
     return false;
-  }
-}
-
-/**
- * Get signed URL for temporary access
- */
-export async function getSignedUrl(key: string, expiresIn = 3600): Promise<string | null> {
-  try {
-    const response = await fetch(
-      `${WORKER_URL}/signed?key=${encodeURIComponent(key)}&expires=${expiresIn}`
-    );
-
-    if (!response.ok) return null;
-
-    const result = await response.json();
-    return result.url;
-  } catch (error) {
-    console.error('Get signed URL error:', error);
-    return null;
   }
 }

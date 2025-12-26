@@ -585,10 +585,5 @@ export const checkBackendHealth = async (): Promise<boolean> => {
   }
 };
 
-// Compatibility exports
+// Compatibility export
 export const getApiBaseUrl = () => import.meta.env.VITE_SUPABASE_URL || '';
-export const setApiBaseUrl = () => {};
-export const isAccessingViaMdns = () => false;
-export const getMdnsFallbackIp = () => null;
-export const setMdnsFallbackIp = () => {};
-export const clearMdnsFallbackIp = () => {};

@@ -11,6 +11,26 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     allowedHosts: true,
   },
+  // Production optimizations
+  build: {
+    target: 'es2020',
+    minify: 'esbuild',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['@radix-ui/react-dialog', '@radix-ui/react-select', '@radix-ui/react-tabs'],
+          'vendor-charts': ['recharts'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+        }
+      }
+    }
+  },
+  // Drop console logs in production
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
   plugins: [
     react(), 
     mode === "development" && componentTagger(),

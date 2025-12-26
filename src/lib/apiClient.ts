@@ -14,9 +14,4 @@ export {
   transactionsApi,
   checkBackendHealth,
   getApiBaseUrl,
-  setApiBaseUrl,
-  isAccessingViaMdns,
-  getMdnsFallbackIp,
-  setMdnsFallbackIp,
-  clearMdnsFallbackIp,
 } from './supabaseApi';
