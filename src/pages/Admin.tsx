@@ -634,9 +634,13 @@ export default function Admin() {
       {/* Mobile Header */}
       <div className="lg:hidden bg-sidebar text-sidebar-foreground p-4 flex items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
-            <span className="text-primary-foreground font-bold">C</span>
-          </div>
+          {settings.logo ? (
+            <img src={settings.logo} alt={settings.restaurantName} className="w-10 h-10 rounded-xl object-cover" />
+          ) : (
+            <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
+              <span className="text-primary-foreground font-bold">{settings.restaurantName?.charAt(0) || 'R'}</span>
+            </div>
+          )}
           <span className="font-serif font-bold">{settings.restaurantName}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -692,9 +696,13 @@ export default function Admin() {
       <aside className="hidden lg:flex w-72 sidebar flex-col sticky top-0 h-screen flex-shrink-0">
         <div className="sidebar-header">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center shadow-warm">
-              <span className="text-primary-foreground font-bold text-xl">C</span>
-            </div>
+            {settings.logo ? (
+              <img src={settings.logo} alt={settings.restaurantName} className="w-12 h-12 rounded-2xl object-cover shadow-warm" />
+            ) : (
+              <div className="w-12 h-12 gradient-primary rounded-2xl flex items-center justify-center shadow-warm">
+                <span className="text-primary-foreground font-bold text-xl">{settings.restaurantName?.charAt(0) || 'R'}</span>
+              </div>
+            )}
             <div>
               <span className="font-serif font-bold text-lg text-sidebar-foreground">{settings.restaurantName}</span>
               <p className="text-xs text-sidebar-foreground/60">Admin Dashboard</p>
@@ -725,26 +733,26 @@ export default function Admin() {
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto flex flex-col min-w-0">
-        <div className="mb-6 md:mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="font-serif text-xl md:text-2xl font-bold text-foreground">{navItems.find(n => n.id === tab)?.label}</h1>
-            <p className="text-xs md:text-sm text-muted-foreground mt-1">{formatNepalDateTime(new Date())}</p>
-          </div>
-          {tab !== 'settings' && (
-            <Button 
-              variant="outline"
-              className="hidden lg:flex items-center gap-2"
-              onClick={() => navigate('/counter')}
-            >
-              <MonitorDot className="w-4 h-4" /> Counter
-            </Button>
-          )}
-        </div>
         <div className="flex-1">
 
         {/* Dashboard */}
         {tab === 'dashboard' && (
           <div className="space-y-4 md:space-y-6">
+            {/* Header with Counter button */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div>
+                <h2 className="text-lg md:text-2xl font-bold">Dashboard</h2>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">{formatNepalDateTime(new Date())}</p>
+              </div>
+              <Button 
+                variant="outline"
+                className="hidden lg:flex items-center gap-2"
+                onClick={() => navigate('/counter')}
+              >
+                <MonitorDot className="w-4 h-4" /> Counter
+              </Button>
+            </div>
+            
             {/* Date Range Filter */}
             <div className="bg-card p-3 md:p-4 rounded-xl border border-border space-y-3">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -804,49 +812,50 @@ export default function Admin() {
             </div>
 
             {/* Subscription Status Card */}
-            {subscriptionStatus && typeof subscriptionStatus.daysRemaining === 'number' && (
+            {subscriptionStatus && subscriptionStatus.expiresAt && (
               <div className={`p-4 rounded-xl border ${
-                subscriptionStatus.daysRemaining <= 3 
+                (subscriptionStatus.daysRemaining ?? 999) <= 3 
                   ? 'bg-destructive/10 border-destructive/30' 
-                  : subscriptionStatus.daysRemaining <= 7 
+                  : (subscriptionStatus.daysRemaining ?? 999) <= 7 
                     ? 'bg-warning/10 border-warning/30' 
                     : 'bg-primary/10 border-primary/30'
               }`}>
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${
-                    subscriptionStatus.daysRemaining <= 3 
+                    (subscriptionStatus.daysRemaining ?? 999) <= 3 
                       ? 'bg-destructive/20' 
-                      : subscriptionStatus.daysRemaining <= 7 
+                      : (subscriptionStatus.daysRemaining ?? 999) <= 7 
                         ? 'bg-warning/20' 
                         : 'bg-primary/20'
                   }`}>
                     <Shield className={`w-5 h-5 ${
-                      subscriptionStatus.daysRemaining <= 3 
+                      (subscriptionStatus.daysRemaining ?? 999) <= 3 
                         ? 'text-destructive' 
-                        : subscriptionStatus.daysRemaining <= 7 
+                        : (subscriptionStatus.daysRemaining ?? 999) <= 7 
                           ? 'text-warning' 
                           : 'text-primary'
                     }`} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium">
-                      {subscriptionStatus.isTrial ? 'Trial Period' : 'Subscription'}
+                      {subscriptionStatus.isTrial ? 'Trial Period' : 'Active Subscription'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {subscriptionStatus.daysRemaining} day{subscriptionStatus.daysRemaining !== 1 ? 's' : ''} remaining
-                      {subscriptionStatus.expiresAt && (
-                        <span> • Expires {new Date(subscriptionStatus.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      )}
+                      {(() => {
+                        const expiresAt = new Date(subscriptionStatus.expiresAt);
+                        const purchasedAt = new Date(expiresAt.getTime() - (subscriptionStatus.daysRemaining ?? 0) * 24 * 60 * 60 * 1000 - ((subscriptionStatus.isTrial ? 14 : 30) * 24 * 60 * 60 * 1000));
+                        return `Started ${purchasedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} • Valid until ${expiresAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                      })()}
                     </p>
                   </div>
-                  <div className={`text-lg font-bold ${
-                    subscriptionStatus.daysRemaining <= 3 
-                      ? 'text-destructive' 
-                      : subscriptionStatus.daysRemaining <= 7 
-                        ? 'text-warning' 
-                        : 'text-primary'
+                  <div className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    (subscriptionStatus.daysRemaining ?? 999) <= 3 
+                      ? 'bg-destructive/20 text-destructive' 
+                      : (subscriptionStatus.daysRemaining ?? 999) <= 7 
+                        ? 'bg-warning/20 text-warning' 
+                        : 'bg-success/20 text-success'
                   }`}>
-                    {subscriptionStatus.daysRemaining}
+                    {subscriptionStatus.plan === 'trial' ? 'Trial' : 'Active'}
                   </div>
                 </div>
               </div>
@@ -893,7 +902,10 @@ export default function Admin() {
         {tab === 'analytics' && (
           <div className="space-y-4 md:space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-              <h2 className="text-lg md:text-2xl font-bold">Analytics & Reports</h2>
+              <div>
+                <h2 className="text-lg md:text-2xl font-bold">Analytics & Reports</h2>
+                <p className="text-xs md:text-sm text-muted-foreground mt-1">{formatNepalDateTime(new Date())}</p>
+              </div>
               <Button onClick={exportAnalyticsCSV} className="gradient-primary w-full sm:w-auto">
                 <Download className="w-4 h-4 mr-2" /> Export CSV
               </Button>
