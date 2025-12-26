@@ -414,6 +414,16 @@ export const customersApi = {
     if (error) throw error;
     return mapCustomerFromDb(data);
   },
+  updatePhone: async (oldPhone: string, newPhone: string) => {
+    const { data, error } = await supabase
+      .from('customers')
+      .update({ phone: newPhone })
+      .eq('phone', oldPhone)
+      .select()
+      .single();
+    if (error) throw error;
+    return mapCustomerFromDb(data);
+  },
 };
 
 // Staff API

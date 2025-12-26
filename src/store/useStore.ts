@@ -120,6 +120,7 @@ interface StoreState extends AuthState {
   setCustomers: (customers: Customer[]) => void;
   getCustomerPoints: (phone: string) => number;
   addOrUpdateCustomer: (phone: string, amount: number) => void;
+  updateCustomerPhone: (oldPhone: string, newPhone: string) => Promise<void>;
 
   // Staff
   staff: Staff[];
@@ -475,6 +476,27 @@ export const useStore = create<StoreState>()((set, get) => ({
       )
     };
   }),
+
+  updateCustomerPhone: async (oldPhone, newPhone) => {
+    const state = get();
+    const existing = state.customers.find(c => c.phone === oldPhone);
+    if (!existing) return;
+    
+    // Check if new phone already exists
+    if (state.customers.some(c => c.phone === newPhone)) {
+      throw new Error('Phone number already exists');
+    }
+    
+    // Update locally first
+    set({
+      customers: state.customers.map(c =>
+        c.phone === oldPhone ? { ...c, phone: newPhone } : c
+      )
+    });
+    
+    // Sync to backend
+    await customersApi.updatePhone(oldPhone, newPhone);
+  },
 
   // Staff - uses defaults until loaded from backend
   staff: defaultStaff,

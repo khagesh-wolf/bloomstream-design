@@ -11,7 +11,7 @@ import {
   Plus, Edit, Trash2, LogOut, Settings, LayoutDashboard, 
   UtensilsCrossed, Users, QrCode, History, TrendingUp, ShoppingBag, DollarSign,
   Download, Search, Eye, UserCog, BarChart3, Calendar, Image as ImageIcon, ToggleLeft, ToggleRight,
-  Check, X, Menu as MenuIcon, MonitorDot, GripVertical, Upload, Loader2, Shield
+  Check, X, Menu as MenuIcon, MonitorDot, GripVertical, Upload, Loader2, Shield, Pencil
 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
@@ -48,7 +48,8 @@ export default function Admin() {
     categories, addCategory, updateCategory, deleteCategory, reorderCategories,
     customers, transactions, staff, settings, updateSettings,
     addStaff, updateStaff, deleteStaff, expenses,
-    isAuthenticated, currentUser, logout, getTodayStats
+    isAuthenticated, currentUser, logout, getTodayStats,
+    updateCustomerPhone
   } = useStore();
 
   // Subscription status for admin
@@ -83,6 +84,7 @@ export default function Admin() {
 
   // Modal states
   const [customerDetailModal, setCustomerDetailModal] = useState<Customer | null>(null);
+  const [editingCustomerPhone, setEditingCustomerPhone] = useState<{ originalPhone: string; newPhone: string } | null>(null);
   const [staffModal, setStaffModal] = useState<{ open: boolean; editing: Staff | null }>({ open: false, editing: null });
   const [newStaff, setNewStaff] = useState({ username: '', password: '', pin: '', name: '', role: 'counter' as 'admin' | 'counter' });
 
@@ -1171,9 +1173,16 @@ export default function Admin() {
               ) : filteredCustomers.map(c => (
                 <div key={c.phone} className="bg-card rounded-xl border border-border p-4">
                   <div className="flex justify-between items-start mb-3">
-                    <div>
+                    <div className="flex items-center gap-2">
                       <p className="font-mono text-sm">{c.phone}</p>
-                      <p className="font-medium">{c.name || 'No name'}</p>
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="h-6 w-6 p-0"
+                        onClick={() => setEditingCustomerPhone({ originalPhone: c.phone, newPhone: c.phone })}
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </Button>
                     </div>
                     <span className="bg-warning/10 text-warning px-2 py-1 rounded-full text-xs">
                       ⭐ {c.points}
@@ -1207,7 +1216,6 @@ export default function Admin() {
                   <thead className="bg-muted">
                     <tr>
                       <th className="text-left p-4">Phone</th>
-                      <th className="text-left p-4">Name</th>
                       <th className="text-left p-4">Orders</th>
                       <th className="text-left p-4">Total Spent</th>
                       <th className="text-left p-4">Points</th>
@@ -1217,11 +1225,22 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {filteredCustomers.length === 0 ? (
-                      <tr><td colSpan={7} className="text-center py-8 text-muted-foreground">No customers found</td></tr>
+                      <tr><td colSpan={6} className="text-center py-8 text-muted-foreground">No customers found</td></tr>
                     ) : filteredCustomers.map(c => (
                       <tr key={c.phone} className="border-t border-border hover:bg-muted/50">
-                        <td className="p-4 font-mono">{c.phone}</td>
-                        <td className="p-4">{c.name || '-'}</td>
+                        <td className="p-4 font-mono">
+                          <div className="flex items-center gap-2">
+                            {c.phone}
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-6 w-6 p-0"
+                              onClick={() => setEditingCustomerPhone({ originalPhone: c.phone, newPhone: c.phone })}
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </td>
                         <td className="p-4">{c.totalOrders}</td>
                         <td className="p-4 font-bold">रू {c.totalSpent}</td>
                         <td className="p-4">
@@ -2272,7 +2291,20 @@ export default function Admin() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">Phone</p>
-                  <p className="font-bold">{customerDetailModal.phone}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold">{customerDetailModal.phone}</p>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      className="h-6 w-6 p-0"
+                      onClick={() => {
+                        setEditingCustomerPhone({ originalPhone: customerDetailModal.phone, newPhone: customerDetailModal.phone });
+                        setCustomerDetailModal(null);
+                      }}
+                    >
+                      <Pencil className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="bg-muted p-4 rounded-lg">
                   <p className="text-sm text-muted-foreground">Loyalty Points</p>
@@ -2299,6 +2331,49 @@ export default function Admin() {
                    customerDetailModal.totalSpent >= 1000 ? '🥉 Bronze' : '⭐ Regular'}
                 </p>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Customer Phone Modal */}
+      <Dialog open={!!editingCustomerPhone} onOpenChange={() => setEditingCustomerPhone(null)}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-sm">
+          <DialogHeader><DialogTitle>Edit Phone Number</DialogTitle></DialogHeader>
+          {editingCustomerPhone && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Current: {editingCustomerPhone.originalPhone}</p>
+                <Input 
+                  placeholder="New phone number" 
+                  value={editingCustomerPhone.newPhone} 
+                  onChange={e => setEditingCustomerPhone({ ...editingCustomerPhone, newPhone: e.target.value })}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingCustomerPhone(null)}>Cancel</Button>
+                <Button 
+                  onClick={async () => {
+                    if (!editingCustomerPhone.newPhone.trim()) {
+                      toast.error('Phone number is required');
+                      return;
+                    }
+                    if (editingCustomerPhone.newPhone === editingCustomerPhone.originalPhone) {
+                      setEditingCustomerPhone(null);
+                      return;
+                    }
+                    try {
+                      await updateCustomerPhone(editingCustomerPhone.originalPhone, editingCustomerPhone.newPhone);
+                      toast.success('Phone number updated');
+                      setEditingCustomerPhone(null);
+                    } catch (error: any) {
+                      toast.error(error.message || 'Failed to update phone number');
+                    }
+                  }}
+                >
+                  Save
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
